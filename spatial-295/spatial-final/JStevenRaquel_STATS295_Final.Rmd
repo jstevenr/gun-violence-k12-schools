@@ -1,0 +1,112 @@
+---
+title: "Spatial Analysis of School Shootings"
+author: "J Steven Raquel"
+date: "3/10/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lubridate)
+library(sp)
+library(spdep)
+library(raster)
+library(maptools)
+library(spatstat)
+library(raster)
+library(plotrix)
+library(stringi)
+library(stringdist)
+library(ggmap)
+
+```
+
+
+
+```{r reading_data}
+
+# gun control laws 
+# violent video game sales
+# music
+
+incidents <- read_csv("ss_incidents.csv", na = c("", "null", "N/A"),
+                      show_col_types = F)
+perps <- read_csv("ss_perps.csv", na = c("", "null", "N/A"), 
+                  show_col_types = F)
+weapons <- read_csv("ss_weapons.csv", na = c("", "null", "N/A"),
+                    show_col_types = F)
+schools <- read_csv("public_schools.csv", show_col_types = F)
+
+# incident dataset filtered
+incidents_f <- incidents %>%
+  dplyr::select(Incident_ID, Reliability, Date, Quarter, School, 
+                City, State, School_Level, Location, Location_Type, 
+                During_School, Time_Period, Situation, 
+                Bullied, Domestic_Violence, Gang_Related, 
+                Preplanned, Shots_Fired) %>%
+  mutate(Date = as.Date(Date)) %>%
+  filter(!(Situation %in% c("Accidental", "Escalation of Dispute",
+                            "Domestic w/ Targeted Victim", "Suicide/Attempted"))
+         ) %>%
+  filter(Gang_Related == "No") %>%
+  filter(Date > "1990-01-01") %>% 
+  unite(Full_Location, c(School, City, State), remove = F, sep = " ") %>%
+  mutate(Full_Location = as.character(Full_Location))
+
+incidents_f <- incidents_f %>% 
+  mutate_at(setdiff(names(incidents_f), c("Incident_ID", "Full_Location", "Date")), 
+               .funs = as.factor)
+
+# perpetrator dataset filtered
+perps_f <- perps %>% 
+  dplyr::select(incidentid, age, gender, race, schoolaffiliation) %>%
+  rename(Incident_ID = incidentid, Age = age, Gender = gender, 
+         Race = race, School_Affiliation = schoolaffiliation)
+
+# weapon dataset filtered
+weapons_f <- weapons %>%
+  dplyr::select(incidentid, weapontype) %>%
+  rename(Incident_ID = incidentid, Weapon_Type = weapontype)
+```
+
+```{r get-lat-lon, include = F}
+# incidents_f2 <- incidents_f %>% mutate_geocode(Full_Location, output = "latlon")
+# write.csv(incidents_f2, "ss_incidents_f2.csv", row.names = F)
+incidents_f2 <- read.csv("ss_incidents_f2.csv") %>% 
+  dplyr::select(-X) %>%
+  filter(!(Situation %in% c("Intentional Property Damage")))
+```
+
+
+
+```{r merging}
+# adding perpetrator information to the dataset
+incidents_f3 <- left_join(incidents_f2, perps_f, by = "Incident_ID")
+# adding weapon information to the dataset
+incidents_f4 <- left_join(incidents_f3, weapons_f, by = "Incident_ID")
+```
+
+```{r plot}
+# maps is loaded
+usa <- map_data("usa")
+ggplot(data = usa,
+       mapping = aes(x = incidents_f4$))
+
+
+```
+
+
+
+
+```{r ymhc}
+# Youth Mental Healthcare Rankings
+ymhc_2019 <- read_csv("youth_mhc_2019_2.csv", 
+                        col_names = T, col_types = "ic") %>%
+  rename(Youth_MHC_Rank = Rank, State_Name = State)
+ymhc_2019$State <- state.abb[match(ymhc_2019$State_Name, state.name)]
+
+
+```
+
