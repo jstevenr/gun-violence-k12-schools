@@ -18,8 +18,6 @@ library(maptools)
 library(spatstat)
 library(raster)
 library(plotrix)
-library(stringi)
-library(stringdist)
 library(ggmap)
 library(splancs)
 library(tigris)
@@ -28,7 +26,7 @@ options(tigris_use_cache = TRUE)
 
 
 
-```{r reading_data}
+```{r reading_data, warnings = F}
 
 # gun control laws 
 # violent video game sales
@@ -39,7 +37,6 @@ perps <- read_csv("ss_perps.csv", na = c("", "null", "N/A"),
                   show_col_types = F)
 weapons <- read_csv("ss_weapons.csv", na = c("", "null", "N/A"),
                     show_col_types = F)
-
 incidents <- read_csv("ss_incidents.csv", na = c("", "null", "N/A"),
                       show_col_types = F)
 # incident dataset filtered
@@ -73,6 +70,12 @@ weapons_f <- weapons %>%
   dplyr::select(incidentid, weapontype) %>%
   rename(Incident_ID = incidentid, Weapon_Type = weapontype)
 
+# Youth Mental Healthcare Rankings
+ymhc_2019 <- read_csv("youth_mhc_2019_2.csv", 
+                        col_names = T, col_types = "ic") %>%
+  rename(Youth_MHC_Rank = Rank, State_Name = State)
+ymhc_2019$State <- state.abb[match(ymhc_2019$State_Name, state.name)]
+
 # from tigris
 states_shp <- states()
 ```
@@ -95,13 +98,16 @@ df <- incidents_f4
 # maps is loaded
 states <- map_data("state")
 
-
 ggplot(data = states, aes(x = long, y = lat, group = group)) + 
-  geom_polygon(fill = 'white', color = 'black') + 
+  geom_polygon(fill = 'lightgrey', color = 'black') + 
   geom_point(data = df,
-             aes(x = lon, y = lat, group = NULL), color = "red") +
-  ggtitle("School Shootings in US, 1990-Present")
+             aes(x = lon, y = lat, group = NULL), color = "red", cex = 0.75) +
+  ggtitle("School Shootings in US, 1990-Present") +
+  theme_minimal()
 ```
+
+
+
 
 ```{r states-ppp}
 # sf is loaded
@@ -119,26 +125,57 @@ excludes <- c("Hawaii", "Alaska", "United States Virgin Islands",
 # subsetting shapefile to only the mainland United States
 mainland_shp <- states_shp[!paste(states_shp$NAME) %in% excludes,]
 # converting to flat coordinates
-mainland_flat <- st_transform(mainland_shp, crs = 6345)
+# converting to the Albers conical projection
+# 5070
+mainland_flat <- st_transform(mainland_shp, crs=5070)
 # creating a window
 mainland_owin <- as.owin(as_Spatial(mainland_flat))
 
-# sf object
-df_sf <- st_as_sf(df, coords = c("lat", "lon"))
-df_sf <- st_set_crs(df_sf, 6345)
+latlon_to_cartesian <- function(lat, lon) {
+  
+  require(REdaS) # for rad2deg
+  
+  lat_rad <- deg2rad(lat)
+  lon_rad <- deg2rad(lon)
+  R <- 6371 # radius of the Earth, in km
+  
+  x <- R*cos(lat_rad)*cos(lon_rad)
+  y <- R*cos(lat_rad)*sin(lon_rad)
+  
+  coords <- data.frame(x,y)
+  
+  return(coords)
+}
 
-df_geocoords <- as.matrix(cbind(df$lat, df$lon))
+geo_coords <- latlon_to_cartesian(df$lat, df$lon)
+
 # creating ppp object
-df_ppp <- ppp(x = df$lon, y = df$lat, mainland_owin)
-plot(df_ppp, axes = TRUE)
+df_ppp <- ppp(x = geo_coords$x, y = geo_coords$y, 
+              window = mainland_owin)
+plot(df_ppp, axes = T,main = "Point Process Map, CRS=5070")
 ```
 
 
-```{r ymhc}
-# Youth Mental Healthcare Rankings
-ymhc_2019 <- read_csv("youth_mhc_2019_2.csv", 
-                        col_names = T, col_types = "ic") %>%
-  rename(Youth_MHC_Rank = Rank, State_Name = State)
-ymhc_2019$State <- state.abb[match(ymhc_2019$State_Name, state.name)]
+```{r quadrat.test}
+quadrat.test(df_ppp)
+
+# sf object
+df_sf <- st_as_sf(df, coords = c("lon", "lat"))
+df_sf <- st_set_crs(df_sf, 5070)
 ```
 
+```{r spdf}
+albers <-  CRS("+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 
+                                 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs")
+df_spdf <- SpatialPointsDataFrame(coords = data.frame(long = df$lon, lat = df$lat),
+                                  data = data.frame(Event = rep(1, times = nrow(df))),
+                                  proj4string = albers)
+events <- df_spdf[df_spdf$Event == 1,]
+events_ppp <- as.ppp(X = events)
+plot(events_ppp)
+```
+
+```{r density}
+
+plot(df_sf, max.plot = 24)
+```
