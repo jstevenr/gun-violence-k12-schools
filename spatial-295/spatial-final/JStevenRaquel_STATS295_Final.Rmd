@@ -8,6 +8,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+
 library(tidyverse)
 library(lubridate)
 library(sp)
@@ -20,7 +21,9 @@ library(plotrix)
 library(stringi)
 library(stringdist)
 library(ggmap)
-
+library(splancs)
+library(tigris)
+options(tigris_use_cache = TRUE)
 ```
 
 
@@ -69,6 +72,9 @@ perps_f <- perps %>%
 weapons_f <- weapons %>%
   dplyr::select(incidentid, weapontype) %>%
   rename(Incident_ID = incidentid, Weapon_Type = weapontype)
+
+# from tigris
+states_shp <- states()
 ```
 
 ```{r get-lat-lon, include = F}
@@ -76,28 +82,52 @@ weapons_f <- weapons %>%
 # write.csv(incidents_f2, "ss_incidents_f2.csv", row.names = F)
 incidents_f2 <- read.csv("ss_incidents_f2.csv") %>% 
   dplyr::select(-X) %>%
-  filter(!(Situation %in% c("Intentional Property Damage")))
-```
-
-
-
-```{r merging}
+  filter(!(Situation %in% c("Intentional Property Damage"))) %>%
+  filter(!(State %in% c("AK", "HI")))
 # adding perpetrator information to the dataset
 incidents_f3 <- left_join(incidents_f2, perps_f, by = "Incident_ID")
 # adding weapon information to the dataset
 incidents_f4 <- left_join(incidents_f3, weapons_f, by = "Incident_ID")
+df <- incidents_f4
 ```
 
-```{r plot}
+```{r point-plot}
 # maps is loaded
-usa <- map_data("usa")
-ggplot(data = usa,
-       mapping = aes(x = incidents_f4$))
-
-
+states <- map_data("state")
+ggplot(data = states, aes(x = long, y = lat, group = group)) + 
+  geom_polygon(fill = 'white', color = 'black') + 
+  geom_point(data = df,
+             aes(x = lon, y = lat, group = NULL), color = "red") +
+  ggtitle("School Shootings in US, 1990-Present")
 ```
 
+```{r states-ppp}
+# sf is loaded
+# raster is loaded
+# spatstat.geom is loaded
+# tigris is loaded
+# downloads the shapefile of the US from Tigris
 
+# states_shp is loaded
+# states_shp <- tigris::states()
+
+# parts of the USA to exclude
+excludes <- c("Hawaii", "Alaska", "United States Virgin Islands",
+              "Commonwealth of the Northern Mariana Islands",
+              "Guam", "American Samoa","Puerto Rico")
+
+# subsetting shapefile to only the mainland United States
+mainland_shp <- states_shp[!paste(states_shp$NAME) %in% excludes,]
+# converting to flat coordinates
+mainland_flat <- st_transform(mainland_shp, crs = 6345)
+# creating a window
+mainland_owin <- as.owin(as_Spatial(mainland_flat))
+
+# creating ppp object
+df_geocoords <- as.matrix(cbind(df$lat, df$lon))
+df_ppp <- as.ppp(df_geocoords, mainland_owin)
+plot(df_ppp, axes = TRUE)
+```
 
 
 ```{r ymhc}
