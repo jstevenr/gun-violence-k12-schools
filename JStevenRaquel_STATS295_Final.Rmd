@@ -34,14 +34,14 @@ options(tigris_use_cache = TRUE)
 # violent video game sales
 # music
 
-incidents <- read_csv("ss_incidents.csv", na = c("", "null", "N/A"),
-                      show_col_types = F)
+
 perps <- read_csv("ss_perps.csv", na = c("", "null", "N/A"), 
                   show_col_types = F)
 weapons <- read_csv("ss_weapons.csv", na = c("", "null", "N/A"),
                     show_col_types = F)
-schools <- read_csv("public_schools.csv", show_col_types = F)
 
+incidents <- read_csv("ss_incidents.csv", na = c("", "null", "N/A"),
+                      show_col_types = F)
 # incident dataset filtered
 incidents_f <- incidents %>%
   dplyr::select(Incident_ID, Reliability, Date, Quarter, School, 
@@ -94,6 +94,8 @@ df <- incidents_f4
 ```{r point-plot}
 # maps is loaded
 states <- map_data("state")
+
+
 ggplot(data = states, aes(x = long, y = lat, group = group)) + 
   geom_polygon(fill = 'white', color = 'black') + 
   geom_point(data = df,
@@ -106,10 +108,8 @@ ggplot(data = states, aes(x = long, y = lat, group = group)) +
 # raster is loaded
 # spatstat.geom is loaded
 # tigris is loaded
-# downloads the shapefile of the US from Tigris
-
-# states_shp is loaded
-# states_shp <- tigris::states()
+# download US states shapefile
+states_shp <- tigris::states()
 
 # parts of the USA to exclude
 excludes <- c("Hawaii", "Alaska", "United States Virgin Islands",
@@ -123,9 +123,13 @@ mainland_flat <- st_transform(mainland_shp, crs = 6345)
 # creating a window
 mainland_owin <- as.owin(as_Spatial(mainland_flat))
 
-# creating ppp object
+# sf object
+df_sf <- st_as_sf(df, coords = c("lat", "lon"))
+df_sf <- st_set_crs(df_sf, 6345)
+
 df_geocoords <- as.matrix(cbind(df$lat, df$lon))
-df_ppp <- as.ppp(df_geocoords, mainland_owin)
+# creating ppp object
+df_ppp <- ppp(x = df$lon, y = df$lat, mainland_owin)
 plot(df_ppp, axes = TRUE)
 ```
 
@@ -136,7 +140,5 @@ ymhc_2019 <- read_csv("youth_mhc_2019_2.csv",
                         col_names = T, col_types = "ic") %>%
   rename(Youth_MHC_Rank = Rank, State_Name = State)
 ymhc_2019$State <- state.abb[match(ymhc_2019$State_Name, state.name)]
-
-
 ```
 
