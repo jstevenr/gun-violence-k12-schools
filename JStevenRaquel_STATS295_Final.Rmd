@@ -27,6 +27,7 @@ library(splancs)
 library(patchwork) # for plotting ggplots
 library(viridis)
 library(RColorBrewer)
+library(classInt)
 ```
 
 ```{r read_incidents_old, eval = F, include = F}
@@ -166,14 +167,18 @@ ss_plot_90s <- ggplot() +
 #  geom_text_repel(data = cities_sf, 
 #                  aes(x = x, y = y, label = City_State),
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
-  theme_minimal() + 
   theme(axis.title = element_blank()) +
-  ggtitle("K-12 School Shootings, US 1990-99") +
-  theme(axis.text.x=element_blank(), #remove x axis labels
-        axis.ticks.x=element_blank(), #remove x axis ticks
-        axis.text.y=element_blank(),  #remove y axis labels
-        axis.ticks.y=element_blank()  #remove y axis ticks
-        )
+  ggtitle("1990-99") +
+  theme_bw() +
+  theme(
+    axis.title = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x = element_blank(), 
+    axis.text.y = element_blank(),  
+    axis.ticks.y = element_blank(),
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
 
 # 2000-2009
 ss_plot_00s <- ggplot() + 
@@ -183,14 +188,18 @@ ss_plot_00s <- ggplot() +
 #  geom_text_repel(data = cities_sf, 
 #                  aes(x = x, y = y, label = City_State),
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
-  theme_minimal() + 
   theme(axis.title = element_blank()) +
-  ggtitle("K-12 School Shootings, US 2000-09") +
-  theme(axis.text.x=element_blank(), #remove x axis labels
-        axis.ticks.x=element_blank(), #remove x axis ticks
-        axis.text.y=element_blank(),  #remove y axis labels
-        axis.ticks.y=element_blank()  #remove y axis ticks
-        )
+  ggtitle("2000-09") +
+  theme_bw() +
+  theme(
+    axis.title = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x = element_blank(), 
+    axis.text.y = element_blank(),  
+    axis.ticks.y = element_blank(),
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
 
 # 2010-2019
 ss_plot_10s <- ggplot() + 
@@ -200,14 +209,17 @@ ss_plot_10s <- ggplot() +
 #  geom_text_repel(data = cities_sf, 
 #                  aes(x = x, y = y, label = City_State),
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
-  theme_minimal() + 
-  theme(axis.title = element_blank()) +
-  ggtitle("K-12 School Shootings, US 2010-19") + 
-  theme(axis.text.x=element_blank(), #remove x axis labels
-        axis.ticks.x=element_blank(), #remove x axis ticks
-        axis.text.y=element_blank(),  #remove y axis labels
-        axis.ticks.y=element_blank()  #remove y axis ticks
-        )
+  ggtitle("2010-19") + 
+  theme_bw() +
+  theme(
+    axis.title = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x = element_blank(), 
+    axis.text.y = element_blank(),  
+    axis.ticks.y = element_blank(),
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
 
 # 1990-2019
 ss_plot_9019 <- ggplot() + 
@@ -217,23 +229,30 @@ ss_plot_9019 <- ggplot() +
 #  geom_text_repel(data = cities_sf, 
 #                  aes(x = x, y = y, label = City_State),
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
-  theme_minimal() + 
-  theme(axis.title = element_blank()) +
-  ggtitle("K-12 School Shootings in US, 1990-2019") + 
-  theme(axis.text.x=element_blank(), #remove x axis labels
-      axis.ticks.x=element_blank(), #remove x axis ticks
-      axis.text.y=element_blank(),  #remove y axis labels
-      axis.ticks.y=element_blank()  #remove y axis ticks
-      )
+  ggtitle("1990-2019") + 
+  theme_bw() +
+  theme(
+      axis.title = element_blank(),
+      axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank(), 
+      axis.text.y=element_blank(),  
+      axis.ticks.y=element_blank(),
+      panel.border =  element_blank(), 
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank())
 ```
 
 ```{r plots-all-four}
 # patchwork is loaded
-ss_plot_9019 + ss_plot_90s + ss_plot_00s + ss_plot_10s
+ss_plot_9019 + ss_plot_90s + ss_plot_00s + ss_plot_10s + 
+  plot_annotation(
+    title = "Shootings in K-12 schools in the US"
+  )
 ```
 
 ```{r situation-plot}
 total <- length(df_9019$Incident_ID %>% unique())
+
 situation_count <- df_9019$Situation %>%
   table() %>% 
   as.data.frame() %>%
@@ -245,16 +264,18 @@ situation_count <- df_9019$Situation %>%
 
 ggplot(situation_count, aes(x = Situation, y = Freq),
        alpha = 0.7) + 
-  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_bar(stat = "identity", fill = "darkred") +
   coord_flip() +
-  theme_minimal() +
+  theme_bw() +
+  theme(
+      panel.border =  element_blank()) +
   geom_text(aes(label = paste0(Freq, ", ", Pct, "%")), 
             hjust= -0.1, color = "black", size = 3.5) +
   scale_y_continuous(limits = c(0, 350)) +
   ggtitle("K-12 School Shootings, by Situation, 1990-2019")
 ```
 
-```{r plot-chloropleth}
+```{r event-counts}
 df_2019 <- df %>% filter(Date >= "2019-01-01" & Date <= "2019-12-31")
 
 # counting the number of events per state
@@ -271,6 +292,9 @@ us_states2 <- us_states %>%
   mutate(Freq_cat = factor(Freq, labels = c(0,1,2,3,5), ordered = TRUE)) %>%
   st_as_sf()
 
+```
+
+```{r gun-control}
 # getting the amount of gun control laws per state
 gun_control_2019 <- gun_control %>%
   rename(NAME = state) %>%
@@ -284,48 +308,85 @@ laws_breaks <- classIntervals(c(min(gun_control_2019$lawtotal - 0.5),
                               n = 5, style = "quantile")
 us_states3 <- us_states %>% 
   left_join(gun_control_2019, by = "NAME")%>%
-  mutate(law_cat = cut(lawtotal, breaks = laws_breaks$brks))
+  mutate(law_cat = cut(lawtotal, breaks = laws_breaks$brks)) %>%
+  st_as_sf()
+
+```
+
+```{r mental-healthcare}
+mha_2019 <- read.csv("mha_rank_2019.csv", sep = " ") %>% 
+  rename(NAME = State.) %>%
+  filter(!(NAME %in% c("Alaska", "Hawaii")))
+
+mhc_breaks <- classIntervals(c(min(mha_2019$Rank - 1), 
+                               mha_2019$Rank),
+                             n = 5, style = "fixed",
+                             fixedBreaks = c(1, 10, 20,
+                                             30, 40, 51))
+
+us_states4 <- us_states %>% 
+  left_join(mha_2019, by = "NAME") %>%
+  mutate(mhc_cut = cut(Rank, breaks = mhc_breaks$brks))
 ```
 
 ```{r plot-areal}
 # RColorBrewer is loaded
+Reds <- brewer.pal(5, "Reds")
+Reds_rev <- Reds[length(Reds):1]
 
 # plotting the map of events per state (areal data)
 plot_state_incs <- ggplot() + 
-  geom_sf(data = us_states2, aes(fill = Freq_cat)) +
+  geom_sf(data = us_states2, aes(fill = factor(Freq_cat))) +
   theme_bw() +
-  theme(axis.text.x=element_blank(), #remove x axis labels
-      axis.ticks.x=element_blank(), #remove x axis ticks
-      axis.text.y=element_blank(),  #remove y axis labels
+  theme(axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank(), 
+      axis.text.y=element_blank(),  
       axis.ticks.y=element_blank(),
       panel.border =  element_blank(), 
       panel.grid.major = element_blank(), 
-      panel.grid.minor = element_blank()) + #remove y axis ticks
-  labs(fill = "Shootings") +
+      panel.grid.minor = element_blank()) + 
   ggtitle("Number of School Shootings per State, 2019") +
-  scale_colour_brewer(palette = "Reds")
+  scale_fill_manual("Shootings", values = Reds, guide = "legend")
 
 # plotting the number of gun control laws per state (areal data)
 plot_state_laws <- ggplot() +
-  geom_sf(data = us_states3, aes(fill = law_cat)) +
+  geom_sf(data = us_states3, aes(fill = factor(law_cat))) +
   theme_bw() +
-  theme(axis.text.x=element_blank(), #remove x axis labels
-      axis.ticks.x=element_blank(), #remove x axis ticks
-      axis.text.y=element_blank(),  #remove y axis labels
+  theme(axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank(), 
+      axis.text.y=element_blank(),  
       axis.ticks.y=element_blank(),
       panel.border =  element_blank(), 
       panel.grid.major = element_blank(), 
-      panel.grid.minor = element_blank()) + #remove y axis ticks 
+      panel.grid.minor = element_blank()) + 
   ggtitle("Number of Gun Control Laws per State, 2019") +
-  labs(fill = "Laws") +
-  scale_colour_brewer(palette = "Reds", direction = -1) +
-  scale_fill_discrete(na.translate = F)
+  scale_fill_manual("Laws", values = Reds_rev, guide = "legend", 
+                    na.translate = F)
 
+plot_mhc <- ggplot() +
+  geom_sf(data = us_states4, aes(fill = factor(mhc_cut))) + 
+  theme_bw() + 
+  theme(axis.text.x = element_blank(), 
+      axis.ticks.x = element_blank(), 
+      axis.text.y = element_blank(),  
+      axis.ticks.y = element_blank(),
+      panel.border = element_blank(), 
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank()) + 
+  ggtitle("Ranking of Mental Healthcare by State, 2019") +
+  scale_fill_manual("Rank", values = Reds, guide = "legend", 
+                    na.translate = F)
+  
 
 # return plot
-plot_state_incs + plot_state_laws + plot_layout(ncol= 1)
+plot_state_incs + 
+  plot_state_laws + 
+  plot_mhc + 
+  plot_layout(ncol= 1)
 # display.brewer.all(n = 5)
 ```
+
+
 
 ```{r ts-plot}
 # number of events per month
