@@ -2,7 +2,10 @@
 title: "Spatial Analysis of School Shootings"
 author: "J Steven Raquel"
 date: "3/10/2022"
-output: pdf_document
+output: 
+  html_document: 
+      toc: true
+      toc_float: true
 ---
 
 ```{r setup, include=FALSE}
