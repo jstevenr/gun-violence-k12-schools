@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(echo = F, warning = F)
 
 library(tidyverse)
 library(lubridate)
@@ -15,35 +15,14 @@ library(sf)
 library(sp)
 library(spdep)
 library(raster) 
-library(maps)
+library(maps) # to get map shapefiles
 library(maptools)
-library(spatstat)
-
+library(spatstat) # spatial statistics
 library(plotrix)
 library(ggmap) # for utilizing Google Maps API 
 library(splancs)
+library(patchwork) # for plotting ggplots
 ```
-
-# Background
-
-The prevalence of gun violence in schools in the United States has been referred to both as an "epidemic" and a public health crisis. The debate on how to curb these tragedies is a solidly partisan issue, with calls for more and stronger gun control laws, as well as more mental health care, sometimes as an alternative to gun control. While school shootings have taken place in the US for decades, incidences (and gun control debates) have spiked since the 2000s, notably after the Columbine High school shooting in Littleton, Colorado that took place in 1999. This analysis attempts to trace the prevalence of school shootings in the US over the years, by looking at the spatial correlation of the incidents as well as modeling it as a Poisson point process, in order to ascertain whether the locations and events are truly random. We also utilized gun control data to see whether the existence or later implementation of these laws had any effect on later incidents. 
-
-## Data
-
-The school shooting data was sourced directly from the "K-12 School Shooting Database" made available by the Center for Homeland Defense and Security (CHDS). The information that comprises the dataset was determined by a specific process which entailed asking what exactly comprises a school shooting, e.g. whether the encounter happened on school property itself or within a classroom, whether or not the perpetrator was involved with the school in any way, e.g. a gang-related shooting between unaffiliated individuals that occurs after hours on school property, or an accidental discharge of a firearm that results in personal injury, would not be considered school shootings in this context. While incidents of this nature occur within the data, it was a deliberate decision on our part to filter out these incidents so as to hone in one the more specific and cultural recognized definition of a school shooting, which is an attack that takes place on school grounds, in order to target either students or faculty with the intent to cause terror and/or inflict harm on specific individuals. The data goes as far back as 1970 all the way to present day (March 2022 at the time of this writing), but it was of particular interest to look at the data after 1990 since this gives us a window into both the pre- and post-Columbine eras. The data originally only contained the name of the school, as well as the city and state where the events took place, but we were able to use the Google Maps API to source the specific latitude/longitude coordinates of these events, effectively giving us point reference data to model as a point process.
-
-We also have access to data regarding gun control laws in every state, dating from 1991 all the way to 2020. 
-
-# Methods
-
-## Point Pattern Analysis
-
-Considering that we have specific coordinate-level data for these incidents, we effectively have 
-
-
-# Discussion
-
-# References
 
 ```{r read_incidents_old, eval = F, include = F}
 incidents <- read_csv("ss_incidents.csv", na = c("", "null", "N/A"),
@@ -77,12 +56,6 @@ incidents_f <- incidents_f %>%
 # write.csv(incidents_f2, "ss_incidents2.csv", row.names = F)
 ```
 
-```{r ideas, eval = F, include = F}
-# bar plot of incidents by region
-
-
-```
-
 
 ```{r reading_data, warnings = F}
 perps <- read_csv("ss_perps.csv", na = c("", "null", "N/A"), 
@@ -98,18 +71,10 @@ perps_f <- perps %>%
   rename(Incident_ID = incidentid, Age = age, Gender = gender, 
          Race = race, School_Affiliation = schoolaffiliation)
 
-perps_f %>% filter(!(Gender %in% c("Male", "Female"))) %>% View()
-
 # weapon dataset filtered
 weapons_f <- weapons %>%
   dplyr::select(incidentid, weapontype) %>%
   rename(Incident_ID = incidentid, Weapon_Type = weapontype)
-
-# Youth Mental Healthcare Rankings
-ymhc_2019 <- read_csv("youth_mhc_2019_2.csv", 
-                        col_names = T, col_types = "ic") %>%
-  rename(Youth_MHC_Rank = Rank, State_Name = State)
-ymhc_2019$State <- state.abb[match(ymhc_2019$State_Name, state.name)]
 
 incidents_f2 <- read_csv("ss_incidents2.csv", show_col_types =F)
 # adding perpetrator information to the dataset
@@ -117,23 +82,13 @@ incidents_f3 <- left_join(incidents_f2, perps_f, by = "Incident_ID")
 # adding weapon information to the dataset
 incidents_f4 <- left_join(incidents_f3, weapons_f, by = "Incident_ID")
 
-
 # data on shootings between 1970-2022
 df <- incidents_f2
 
-df_90_19 <- df %>% filter(Date >= "1990-01-1" & Date <= "2019-12-31")
+df_9019 <- df %>% filter(Date >= "1990-01-1" & Date <= "2019-12-31")
 df_90S <- df %>% filter(Date >= "1990-01-01" & Date <= "1999-12-31")
 df_00S <- df %>% filter(Date >= "2000-01-01" & Date <= "2009-12-31")
 df_10S <- df %>% filter(Date >= "2010-01-01" & Date <= "2019-12-31")
-
-# major school shootings list:
-# Columbine High School 1999
-# Virginia Tech 2007
-# Sandy Hook 2012
-# Umpqua Community College 2015
-# Santa Fe High School 2018
-# Marjory Stoneman Douglas 2018
-
 ```
 
 ```{r sf-wrangling}
@@ -142,7 +97,7 @@ df_10S <- df %>% filter(Date >= "2010-01-01" & Date <= "2019-12-31")
 # default for us states is 4269
 data(us_states)
 
-sf_90_19 <- st_as_sf(df_90_19, coords = c("lon", "lat")) %>% 
+sf_9019 <- st_as_sf(df_9019, coords = c("lon", "lat")) %>% 
   st_set_crs(4269)
 
 sf_90S <- st_as_sf(df_90S, coords = c("lon", "lat")) %>%
@@ -179,9 +134,26 @@ cities_sf <- st_as_sf(cities_df2, coords = c("lon", "lat")) %>%
          y = purrr::map_dbl(geometry,2))
 ```
 
+# Background
+
+The prevalence of gun violence in schools in the United States has been referred to both as an "epidemic" and a public health crisis. The debate on how to curb these tragedies is a solidly partisan issue, with calls for more and stronger gun control laws, as well as more mental health care, sometimes as an alternative to gun control. While school shootings have taken place in the US for decades, incidences (and gun control debates) have spiked since the 2000s, notably after the Columbine High school shooting in Littleton, Colorado that took place in 1999. This analysis attempts to trace the prevalence of school shootings in the US over the years, by looking at the spatial correlation of the incidents as well as modeling it as a Poisson point process, in order to ascertain whether the locations and events occur with complete spatial randomness. We also utilized gun control data to see whether the existence or later implementation of these laws had any effect on later incidents. 
+
+## Data
+
+The school shooting data was sourced directly from the "K-12 School Shooting Database" made available by the Center for Homeland Defense and Security (CHDS). The information that comprises the dataset was determined by a specific process which entailed asking what exactly comprises a school shooting, e.g. whether the encounter happened on school property itself or within a classroom, whether or not the perpetrator was involved with the school in any way, e.g. a gang-related shooting between unaffiliated individuals that occurs after hours on school property, or an accidental discharge of a firearm that results in personal injury, would not be considered school shootings in this context. While incidents of this nature occur within the data, it was a deliberate decision on our part to filter out these incidents so as to hone in one the more specific and cultural recognized definition of a school shooting, which is an attack that takes place on school grounds, in order to target either students or faculty with the intent to cause terror and/or inflict harm on specific individuals. The data goes as far back as 1970 all the way to present day (March 2022 at the time of this writing), but it was of particular interest to look at the data after 1990 since this gives us a window into both the pre- and post-Columbine eras. The data originally only contained the name of the school, as well as the city and state where the events took place, but we were able to use the Google Maps API to source the specific latitude/longitude coordinates of these events, effectively giving us point reference data to model as a point process.
+
+While the Columbine shooting in 1999 and the Virginia Tech shooting in 2007 (which is not recorded in this dataset on account of having taken place at a university) both recorded very high numbers of casualties and made major headlines, few other incidents in their era seemed to replicate this, despite fears at time that the incidents would inspire copycat tragedies at a similar scale. Conversely, half of the 10 deadliest shootings since 1999 all took place in the 2010s, among them the Sandy Hook and Stoneman Douglas shootings. 
+
+# Methods
+
+## Exploratory Data Analysis
+
+Although we have data dating as far back as 1970, we thought it more prudent to look specifically at the specific time period between the 90s all the way to the end of the 2010s, as a way to "book-end" the different eras of gun violence, in terms of the scale and impact. 
+
 ```{r plot-shootings-90s, echo = F}
 # looking at 3 decades of school shootings
-ggplot() + 
+# 1990-1999
+ss_plot_90s <- ggplot() + 
   geom_sf(data = us_states) +
   geom_sf(data = sf_90S, size = 0.75, col = "red") + 
 #  geom_sf(data = cities_sf, color = "black", size = 1) +
@@ -190,11 +162,15 @@ ggplot() +
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
   theme_minimal() + 
   theme(axis.title = element_blank()) +
-  ggtitle("School Shootings in US, 1990s")
-```
+  ggtitle("K-12 School Shootings, US 1990-99") +
+  theme(axis.text.x=element_blank(), #remove x axis labels
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.text.y=element_blank(),  #remove y axis labels
+        axis.ticks.y=element_blank()  #remove y axis ticks
+        )
 
-```{r plot-shooting-00s, echo = F}
-ggplot() + 
+# 2000-2009
+ss_plot_00s <- ggplot() + 
   geom_sf(data = us_states) +
   geom_sf(data = sf_00S, size = 0.75, col = "red") + 
 #  geom_sf(data = cities_sf, color = "black", size = 1) +
@@ -203,11 +179,15 @@ ggplot() +
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
   theme_minimal() + 
   theme(axis.title = element_blank()) +
-  ggtitle("School Shootings in US, 2000s")
-```
+  ggtitle("K-12 School Shootings, US 2000-09") +
+  theme(axis.text.x=element_blank(), #remove x axis labels
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.text.y=element_blank(),  #remove y axis labels
+        axis.ticks.y=element_blank()  #remove y axis ticks
+        )
 
-```{r plot-shootings-2010s, echo = F}
-ggplot() + 
+# 2010-2019
+ss_plot_10s <- ggplot() + 
   geom_sf(data = us_states) +
   geom_sf(data = sf_10S, size = 0.75, col = "red") + 
 #  geom_sf(data = cities_sf, color = "black", size = 1) +
@@ -216,46 +196,119 @@ ggplot() +
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
   theme_minimal() + 
   theme(axis.title = element_blank()) +
-  ggtitle("School Shootings in US, 2010s")
+  ggtitle("K-12 School Shootings, US 2010-19") + 
+  theme(axis.text.x=element_blank(), #remove x axis labels
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.text.y=element_blank(),  #remove y axis labels
+        axis.ticks.y=element_blank()  #remove y axis ticks
+        )
 
+# 1990-2019
+ss_plot_9019 <- ggplot() + 
+  geom_sf(data = us_states) +
+  geom_sf(data = sf_9019, size = 0.75, col = "red") + 
+#  geom_sf(data = cities_sf, color = "black", size = 1) +
+#  geom_text_repel(data = cities_sf, 
+#                  aes(x = x, y = y, label = City_State),
+#                  hjust = 1, vjust = -0.25, size = 2.5) +
+  theme_minimal() + 
+  theme(axis.title = element_blank()) +
+  ggtitle("K-12 School Shootings in US, 1990-2019") + 
+  theme(axis.text.x=element_blank(), #remove x axis labels
+      axis.ticks.x=element_blank(), #remove x axis ticks
+      axis.text.y=element_blank(),  #remove y axis labels
+      axis.ticks.y=element_blank()  #remove y axis ticks
+      )
 ```
 
-```{r tigris}
-library(tigris)
-library(rgeos)
-states_shp <- tigris::states()
-
-# parts of the USA to exclude
-excludes <- c("Hawaii", "Alaska", "United States Virgin Islands",
-              "Commonwealth of the Northern Mariana Islands",
-              "Guam", "American Samoa","Puerto Rico")
-
-# subsetting shapefile to only the mainland United States
-mainland_shp <- states_shp[!paste(states_shp$NAME) %in% excludes,]
-# converting to Albers' equal area projection
-mainland_flat <- st_transform(mainland_shp, crs = 6345)
-# creating a window based on this map
-mainland_sp <- as_Spatial(mainland_flat)
-mainland_union <- raster::union(mainland_sp)
-mainland_owin <- as.owin(mainland_sp)
-
-plot(mainland_owin)
+```{r plots-all-four}
+# patchwork is loaded
+ss_plot_9019 + ss_plot_90s + ss_plot_00s + ss_plot_10s
 ```
+
+```{r ts-plot}
+# number of events per month
+df2_9019 <- df_9019 %>% 
+  mutate(month_year = floor_date(Date, "year"))
+
+ts_9019 <- df2_9019  %>% 
+  group_by(month_year) %>%
+  summarize(freq = n())
+
+# count of shootings in Apr 1999
+freq_1999 <- ts_9019$freq[ts_9019$month_year == as.Date("1999-01-01")]
+freq_2006 <- ts_9019$freq[ts_9019$month_year == as.Date("2006-01-01")]
+freq_2012 <- ts_9019$freq[ts_9019$month_year == as.Date("2012-01-01")]
+freq_2018 <- ts_9019$freq[ts_9019$month_year == as.Date("2018-01-01")]
+
+# plot of shootings
+ts_9019 %>% 
+  ggplot(aes(x = month_year, y = freq)) +
+  geom_line(color = "red") +
+  xlab("Date") +
+  ylab("Frequency") + 
+  scale_x_date(date_labels = "%b-%Y", date_breaks = "2 years") + 
+  scale_y_continuous(breaks = seq(0,60, by= 5)) +
+  ggtitle("# of K-12 School Shootings per Year, Jan 1990-Dec 2019") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  # adding points to represent certain major events on the timeline
+  # this is for Columbine, Apr 1999
+  geom_point(aes(x = as.Date("1999-01-01"), y = freq_1999),
+             color = "black", size = 2) +
+  geom_label(aes(x = as.Date("1999-01-01"), y = freq_1999, 
+                label = "Columbine (Apr 1999)"),
+             color = "black",
+             nudge_y = -5, nudge_x = -360, size = 3) +
+  # Sandy Hook (Dec 2012)
+  geom_point(aes(x = as.Date("2012-01-01"), y = freq_2012), 
+             color = "black", size = 2) +
+  geom_label(aes(x = as.Date("2012-01-01"), y = freq_2012,
+                 label = "Sandy Hook (Dec 2012)"), 
+             color = "black",
+             nudge_y = -2, nudge_x = 1200, size = 3) +
+  geom_point(aes(x = as.Date("2006-01-01"), y = freq_2006),
+             color = "black", size = 2) +
+  geom_label(aes(x = as.Date("2006-01-01"), y = freq_2006,
+                 label = "West Nickel Mines (Oct 2016)"),
+             nudge_y = 2.5, color = "black", size = 3) +
+  # Stoneman Douglas (Feb 2018) / Santa Fe (May 2018)
+  geom_point(aes(x = as.Date("2018-01-01"), y = freq_2018),
+             color = "black", size = 2) +
+  geom_label(aes(x = as.Date("2018-01-01"), y = freq_2018,
+                 label = "Stoneman Douglas and Santa Fe (Feb/May 2018)"),
+             color = "black",
+             nudge_x = -2800, size = 3)
+```
+
+## Point Pattern Analysis
+
+As with any spatial point pattern analysis, we are concerned with the following three questions, 1) whether the points are located at random, 2) whether they are clustered, and 3) whether they are placed regularly. The hypothesis of _complete spatial randomness_ (CSR) asserts the following:
+
+* The number of events in any region $S$ with area $|S|$ follows a Poisson distribution with mean $\lambda |S|$, where $\lambda$ is the intensity, i.e. $\lambda$ does not change over $S$
+* Given $n$ events in $S$, the points $s_i$ are independently located according to the uniform distribution on $S$, i.e. there is no interaction amongst events.
+
+The intensity function $\lambda(s)$, also known as the first-order property of the spatial point process, is defined as
+
+$$\lambda(s) = \lim_{|\Delta s| \to 0} \frac{E[N(\Delta s)]}{| \Delta s|}$$
+
+Firstly we want to ascertain whether the incidences of school shootings are indeed a Poisson process, and if so, determine whether or not the process is _homogeneous_ (where the intensity function $\lambda(s)$ assumes a constant $\lambda$) or _inhomogeneous_. Contextually, this means we are interested in ascertaining whether the spatial pattern of these shootings is random or not, i.e. are they more likely to take place in certain places, or around each other? The intensity function is the expected number of events per unit area.
+
+## Quadrats
+
+While we could estimate the intensity function across the entire area, what we are interested in this particular analysis is to how the intensity varies across different regions contained therein. We do this by splitting up the area into what are referred to as _quadrats_.
 
 ```{r states-ppp, warning = F}
 # sf is loaded
 # raster is loaded
 # spatstat.geom is loaded
-# tigris is loaded
-# download US states shapefile
 
-## Using the maps package in R which also contains a shapefile for the US
+## getting shapefile of the US
 us_map <- map("usa",plot=F)
-## These are the vectors with the longitudes and latitudes for the points in the boundary
+
+## These are the vectors with the longitudes and latitudes
 us_boundaries_x <- us_map$x
 us_boundaries_y <- us_map$y
-
-us_names <- us_map$names
 
 ## Creating the matrix with the longitude and latitude of the boundaries
 us_poly <- matrix(cbind(us_boundaries_x[1:6886],us_boundaries_y[1:6886]),
@@ -263,31 +316,109 @@ us_poly <- matrix(cbind(us_boundaries_x[1:6886],us_boundaries_y[1:6886]),
 ## Creating the window of the spatial point pattern.
 us_win <- owin(poly=us_poly)
 
-matrix_90_19 <- matrix(cbind(df_90_19$lon, df_90_19$lat),
-                     nrow = length(df_90_19$lat), ncol = 2)
+# creating matrices of the coordinates
+matrix_9019 <- matrix(cbind(df_9019$lon, df_9019$lat),
+                     nrow = length(df_9019$lat), ncol = 2)
+# creating ppp objects with the coordinates and the windows
+ppp_9019 <- as.ppp(matrix_9019, us_win)
+```
+
+```{r plot-ppp-1990-2019}
+quadrat_9019 <- quadratcount(ppp_9019)
+plot(ppp_9019, axes = F, 
+     main = "Poisson Point Pattern, School Shootings 1990-2019", 
+     cols= rgb(0,0,0,.2), pch = 20)
+plot(quadrat_9019, add = TRUE)
+```
+
+```{r quadrat-test}
+# Monte Carlo
+# Ha: the PP is clustered
+quadrat.test(ppp_9019, alternative = "clustered",
+             method = "MonteCarlo", nsim = 4999, conditional = T)
+```
+
+
+# Discussion
+
+# References
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{R KL-functions, cache = T}
+# 1990s
+K_9019 <- Kest(ppp_9019)
+L_9019 <- Lest(ppp_9019)
+```
+
+```{R envelopes, cache = T, results = 'hide'}
+# envelopes
+env_K <- envelope(ppp_9019, fun = Kest, nsim = 99)
+env_L <- envelope(ppp_9019, fun = Lest, nsim = 99)
+```
+```{r plot-envelope}
+plot(env_K, main = "K-function envelope")
+plot(env_L, . - r ~ r, main = "L function envelope")
+```
+
+
+
+```{r bandwidth-calculate, cache = T}
+# optimal bandwidth for the kernel density of each point pattern
+bw_opt_9019 <- bw.diggle(ppp_9019)
+```
+
+
+
+
+```{r density-90-19}
+dens_9019 <- density(ppp_9019, bw = bw_opt_9019)
+plot(dens_9019, main = "Density of School Shootings, 1990-2019")
+contour(dens_9019, add = T)
+```
+
+```{r log-gaussian-cox}
+logcp_9019 <- lgcp.estK(ppp_9019, c(sigma2 = 10, alpha = 2))
+plot(logcp_9019, 
+     main = "Fitted K function and theoretical K function \n log Gaussian-Cox process")
+```
+
+```{r point-process-model}
+# fit clustered point process model
+kpppm_9019 <- kppm(ppp_9019)
+```
+
+\newpage
+
+# References
+
+\newpage
+
+# Appendix
+
+```{r ppp-decades, eval = F}
 matrix_90s <- matrix(cbind(df_90S$lon,df_90S$lat), 
                      nrow = length(df_90S$lat), ncol = 2)
 matrix_00s <- matrix(cbind(df_00S$lon, df_00S$lat),
                      nrow = length(df_00S$lat), ncol = 2)
 matrix_10s <- matrix(cbind(df_10S$lon, df_10S$lat), 
                      nrow = length(df_10S$lat), ncol = 2)
-
-ppp_90_19 <- as.ppp(matrix_90_19, us_win)
 ppp_90s <- as.ppp(matrix_90s, us_win)
 ppp_00s <- as.ppp(matrix_00s, us_win)
 ppp_10s <- as.ppp(matrix_10s, us_win)
-
-
-
-
-# creating ppp object
-plot(ppp_90_19, axes = T)
-plot(ppp_90s, axes = T)
-plot(ppp_00s, axes = T)
-plot(ppp_10s, axes = T)
 ```
 
-```{r out-points}
+```{r out-points, eval = F}
 library(splancs)
 
 plot(us_boundaries_x[1:6887],us_boundaries_y[1:6887], 
@@ -295,57 +426,51 @@ plot(us_boundaries_x[1:6887],us_boundaries_y[1:6887],
 
 
 # rejects
-rejects_90_19 <- attr(ppp_90_19, "rejects")
+rejects_9019 <- attr(ppp_9019, "rejects")
 rejects_90s <- attr(ppp_90s, "rejects")
 rejects_00s <- attr(ppp_00s, "rejects")
 rejects_10s <- attr(ppp_10s, "rejects")
 
 # index of points inside the window
-is_in <- inside.owin(x = matrix_90_19[,1],
-                     y = matrix_90_19[,2],
+is_in <- inside.owin(x = matrix_9019[,1],
+                     y = matrix_9019[,2],
                      us_win)
 
 # data.frame of points in/out
-point_in <- df_90_19[is_in,]
-point_out <- df_90_19[!is_in,]
-
-plot(us_win)
-points(x= point_out$lon,y = point_out$lat, col = "red", cex =0.5, pch = 20)
-
-point_out %>% View()
+point_in <- df_9019[is_in,]
+point_out <- df_9019[!is_in,]
 ```
 
-
-```{R KL-functions, cache = T}
-
-# 1990s
-K_90s <- Kest(ppp_90s)
-L_90s <- Lest(ppp_90s)
-
-# 2010s
-K_00s <- Kest(ppp_00s)
-L_00s <- Lest(ppp_00s)
-
-# 2020s
-K_10s <- Kest(ppp_10s)
-L_10s <- Lest(ppp_10s)
-
+```{r bw-decades, eval = F}
+bw_opt_90s <- bw.diggle(ppp_90s) 
+bw_opt_00s <- bw.diggle(ppp_00s) 
+bw_opt_10s <- bw.diggle(ppp_10s) 
+```
+```{r plot-ppp-90s, eval = F}
+quadrat_90s <- quadratcount(ppp_90s)
+plot(ppp_90s, axes = F, 
+     main = "Poisson Point Pattern, School Shootings 1990s", 
+     cols= rgb(0,0,0,.2), pch = 20)
+plot(quadrat_90s, add = TRUE)
 ```
 
-```{R envelopes, eval = F}
-# envelopes
-#env_K <- envelope(X_ppp, fun = Kest, nsim = 99)
-#env_L <- envelope(X_ppp, fun = Lest, nsim = 99)
+```{r plot-ppp-00s, eval = F}
+quadrat_00s <- quadratcount(ppp_00s)
+plot(ppp_00s, axes = F, 
+     main = "Poisson Point Pattern, School Shootings 2000s", 
+     cols= rgb(0,0,0,.2), pch = 20)
+plot(quadrat_00s, add = TRUE)
 ```
 
-
-```{r plot-K-function}
-plot(K_90s, main = "K function of School Shootings, 1990s")
-plot(L_90s, main = "L function of US School Shootings, 1990s")
+```{r plot-ppp-2010s, eval = F}
+quadrat_10s <- quadratcount(ppp_10s)
+plot(ppp_10s, axes = F, 
+     main = "Poisson Point Pattern, School Shootings 2010s", 
+     cols= rgb(0,0,0,.2), pch = 20)
+plot(quadrat_10s, add = TRUE)
 ```
-```{r quadrat-test}
-# Monte Carlo
-# Ha: the PP is clustered
+
+```{r quadrat-test-decades, eval = F}
 quadrat.test(ppp_90s, alternative = "clustered",
              method = "MonteCarlo", nsim = 4999, conditional = T)
 
@@ -354,41 +479,24 @@ quadrat.test(ppp_00s, alternative = "clustered",
 
 quadrat.test(ppp_10s, alternative = "clustered",
              method = "MonteCarlo", nsim = 4999, conditional = T)
-```
 
-```{r bandwidth-calculate}
-# optimal bandwidth for the kernel density of each point pattern
-bw_opt_90_19 <- bw.diggle(ppp_90_19)
-bw_opt_90s <- bw.diggle(ppp_90s) 
-bw_opt_00s <- bw.diggle(ppp_00s) 
-bw_opt_10s <- bw.diggle(ppp_10s) 
 ```
 
 
-```{r density-90s}
+```{r density-90s, eval = F}
 # cross-validated bandwidth selection for finding optimal bandwidth
 dens_90s <- density(ppp_90s, bw = bw_opt_90s)
 plot(dens_90s, main = "Density of School Shootings, 1990-1999")
+contour(dens_90s, add = T)
 ```
-```{r density-00s}
-
+```{r density-00s, eval = F}
 dens_00s <- density(ppp_00s, bw = bw_opt_00s)
 plot(dens_00s, main = "Density of School Shootings, 2000-2009")
+contour(dens_00s, add = T)
 ```
 
-```{r density-10s}
+```{r density-10s, eval = F}
 dens_10s <- density(ppp_10s, bw = bw_opt_10s)
 plot(dens_10s, main = "Density of School Shootings, 2010-2019")
+contour(dens_10s, add = T)
 ```
-
-```{r density-90-19}
-dens_90_19 <- density(ppp_90_19, bw = bw_opt_90_19)
-plot(dens_90_19, main = "Density of School Shootings, 1990-2019")
-```
-
-```{r log-gaussian-cox}
-logcp <- lgcp.estK(X_ppp, c(sigma2 = 10, alpha = 2))
-plot(logcp,
-     main = "Fitted K function and theoretical K function \n log Gaussian-Cox process")
-```
-
