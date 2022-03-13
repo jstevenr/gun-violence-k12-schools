@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = F)
 
 library(tidyverse)
 library(lubridate)
@@ -24,22 +24,28 @@ library(ggmap) # for utilizing Google Maps API
 library(splancs)
 ```
 
-# Introduction
-
-The issue of gun violence in the United States, particularly in schools, has been referred to as both an epidemic and a public health crisis. 
-
-
 # Background
+
+The prevalence of gun violence in schools in the United States has been referred to both as an "epidemic" and a public health crisis. The debate on how to curb these tragedies is a solidly partisan issue, with calls for more and stronger gun control laws, as well as more mental health care, sometimes as an alternative to gun control. While school shootings have taken place in the US for decades, incidences (and gun control debates) have spiked since the 2000s, notably after the Columbine High school shooting in Littleton, Colorado that took place in 1999. This analysis attempts to trace the prevalence of school shootings in the US over the years, by looking at the spatial correlation of the incidents as well as modeling it as a Poisson point process, in order to ascertain whether the locations and events are truly random. We also utilized gun control data to see whether the existence or later implementation of these laws had any effect on later incidents. 
 
 ## Data
 
+The school shooting data was sourced directly from the "K-12 School Shooting Database" made available by the Center for Homeland Defense and Security (CHDS). The information that comprises the dataset was determined by a specific process which entailed asking what exactly comprises a school shooting, e.g. whether the encounter happened on school property itself or within a classroom, whether or not the perpetrator was involved with the school in any way, e.g. a gang-related shooting between unaffiliated individuals that occurs after hours on school property, or an accidental discharge of a firearm that results in personal injury, would not be considered school shootings in this context. While incidents of this nature occur within the data, it was a deliberate decision on our part to filter out these incidents so as to hone in one the more specific and cultural recognized definition of a school shooting, which is an attack that takes place on school grounds, in order to target either students or faculty with the intent to cause terror and/or inflict harm on specific individuals. The data goes as far back as 1970 all the way to present day (March 2022 at the time of this writing), but it was of particular interest to look at the data after 1990 since this gives us a window into both the pre- and post-Columbine eras. The data originally only contained the name of the school, as well as the city and state where the events took place, but we were able to use the Google Maps API to source the specific latitude/longitude coordinates of these events, effectively giving us point reference data to model as a point process.
+
+We also have access to data regarding gun control laws in every state, dating from 1991 all the way to 2020. 
+
 # Methods
+
+## Point Pattern Analysis
+
+Considering that we have specific coordinate-level data for these incidents, we effectively have 
+
 
 # Discussion
 
 # References
 
-```{r read_incidents_old, eval = F}
+```{r read_incidents_old, eval = F, include = F}
 incidents <- read_csv("ss_incidents.csv", na = c("", "null", "N/A"),
                       show_col_types = F)
 # incident dataset filtered
@@ -64,19 +70,21 @@ incidents_f <- incidents_f %>%
                .funs = as.factor)
 ```
 
-```{r get-lat-lon}
+```{r get-lat-lon, eval = F, include = F}
 # using Google Maps API to search up the lat/lon of all the schools
 #incidents_f2 <- incidents_f %>% 
 #  mutate_geocode(Full_Location)
 # write.csv(incidents_f2, "ss_incidents2.csv", row.names = F)
 ```
 
+```{r ideas, eval = F, include = F}
+# bar plot of incidents by region
+
+
+```
+
 
 ```{r reading_data, warnings = F}
-
-# gun control laws 
-# violent video game sales
-# music
 perps <- read_csv("ss_perps.csv", na = c("", "null", "N/A"), 
                   show_col_types = F)
 weapons <- read_csv("ss_weapons.csv", na = c("", "null", "N/A"),
@@ -89,6 +97,8 @@ perps_f <- perps %>%
   dplyr::select(incidentid, age, gender, race, schoolaffiliation) %>%
   rename(Incident_ID = incidentid, Age = age, Gender = gender, 
          Race = race, School_Affiliation = schoolaffiliation)
+
+perps_f %>% filter(!(Gender %in% c("Male", "Female"))) %>% View()
 
 # weapon dataset filtered
 weapons_f <- weapons %>%
@@ -115,10 +125,6 @@ df_90_19 <- df %>% filter(Date >= "1990-01-1" & Date <= "2019-12-31")
 df_90S <- df %>% filter(Date >= "1990-01-01" & Date <= "1999-12-31")
 df_00S <- df %>% filter(Date >= "2000-01-01" & Date <= "2009-12-31")
 df_10S <- df %>% filter(Date >= "2010-01-01" & Date <= "2019-12-31")
-
-nrow(df_90S)
-nrow(df_00S)
-nrow(df_10S)
 
 # major school shootings list:
 # Columbine High School 1999
@@ -173,7 +179,7 @@ cities_sf <- st_as_sf(cities_df2, coords = c("lon", "lat")) %>%
          y = purrr::map_dbl(geometry,2))
 ```
 
-```{r plot-shootings-90s}
+```{r plot-shootings-90s, echo = F}
 # looking at 3 decades of school shootings
 ggplot() + 
   geom_sf(data = us_states) +
@@ -187,7 +193,7 @@ ggplot() +
   ggtitle("School Shootings in US, 1990s")
 ```
 
-```{r plot-shooting-00s}
+```{r plot-shooting-00s, echo = F}
 ggplot() + 
   geom_sf(data = us_states) +
   geom_sf(data = sf_00S, size = 0.75, col = "red") + 
@@ -200,7 +206,7 @@ ggplot() +
   ggtitle("School Shootings in US, 2000s")
 ```
 
-```{r plot-shootings-2010s}
+```{r plot-shootings-2010s, echo = F}
 ggplot() + 
   geom_sf(data = us_states) +
   geom_sf(data = sf_10S, size = 0.75, col = "red") + 
@@ -214,9 +220,29 @@ ggplot() +
 
 ```
 
+```{r tigris}
+library(tigris)
+library(rgeos)
+states_shp <- tigris::states()
 
+# parts of the USA to exclude
+excludes <- c("Hawaii", "Alaska", "United States Virgin Islands",
+              "Commonwealth of the Northern Mariana Islands",
+              "Guam", "American Samoa","Puerto Rico")
 
-```{r states-ppp}
+# subsetting shapefile to only the mainland United States
+mainland_shp <- states_shp[!paste(states_shp$NAME) %in% excludes,]
+# converting to Albers' equal area projection
+mainland_flat <- st_transform(mainland_shp, crs = 6345)
+# creating a window based on this map
+mainland_sp <- as_Spatial(mainland_flat)
+mainland_union <- raster::union(mainland_sp)
+mainland_owin <- as.owin(mainland_sp)
+
+plot(mainland_owin)
+```
+
+```{r states-ppp, warning = F}
 # sf is loaded
 # raster is loaded
 # spatstat.geom is loaded
@@ -227,24 +253,15 @@ ggplot() +
 us_map <- map("usa",plot=F)
 ## These are the vectors with the longitudes and latitudes for the points in the boundary
 us_boundaries_x <- us_map$x
-range(us_boundaries_x,na.rm=T)
-#[1] -124.68134  -67.00742
 us_boundaries_y <- us_map$y
-range(us_boundaries_y,na.rm=T)
-#[1] 25.12993 49.38323
 
 us_names <- us_map$names
-
-plot(us_boundaries_x[1:6887],
-  us_boundaries_y[1:6887],type="l",col="black",xlab="Longitude",ylab="Latitude")
 
 ## Creating the matrix with the longitude and latitude of the boundaries
 us_poly <- matrix(cbind(us_boundaries_x[1:6886],us_boundaries_y[1:6886]),
                         nrow=6886,ncol=2)
 ## Creating the window of the spatial point pattern.
 us_win <- owin(poly=us_poly)
-
-
 
 matrix_90_19 <- matrix(cbind(df_90_19$lon, df_90_19$lat),
                      nrow = length(df_90_19$lat), ncol = 2)
@@ -254,18 +271,48 @@ matrix_00s <- matrix(cbind(df_00S$lon, df_00S$lat),
                      nrow = length(df_00S$lat), ncol = 2)
 matrix_10s <- matrix(cbind(df_10S$lon, df_10S$lat), 
                      nrow = length(df_10S$lat), ncol = 2)
-## Creating the ppp oject: some shootings are outside the boundaries (8). You
-## might look at them one by one.
 
 ppp_90_19 <- as.ppp(matrix_90_19, us_win)
 ppp_90s <- as.ppp(matrix_90s, us_win)
 ppp_00s <- as.ppp(matrix_00s, us_win)
 ppp_10s <- as.ppp(matrix_10s, us_win)
 
+
+
+
 # creating ppp object
+plot(ppp_90_19, axes = T)
 plot(ppp_90s, axes = T)
 plot(ppp_00s, axes = T)
 plot(ppp_10s, axes = T)
+```
+
+```{r out-points}
+library(splancs)
+
+plot(us_boundaries_x[1:6887],us_boundaries_y[1:6887], 
+     type="l",col="black",xlab="Longitude",ylab="Latitude")
+
+
+# rejects
+rejects_90_19 <- attr(ppp_90_19, "rejects")
+rejects_90s <- attr(ppp_90s, "rejects")
+rejects_00s <- attr(ppp_00s, "rejects")
+rejects_10s <- attr(ppp_10s, "rejects")
+
+# index of points inside the window
+is_in <- inside.owin(x = matrix_90_19[,1],
+                     y = matrix_90_19[,2],
+                     us_win)
+
+# data.frame of points in/out
+point_in <- df_90_19[is_in,]
+point_out <- df_90_19[!is_in,]
+
+plot(us_win)
+points(x= point_out$lon,y = point_out$lat, col = "red", cex =0.5, pch = 20)
+
+point_out %>% View()
 ```
 
 
@@ -320,20 +367,23 @@ bw_opt_10s <- bw.diggle(ppp_10s)
 
 ```{r density-90s}
 # cross-validated bandwidth selection for finding optimal bandwidth
-
-dens_90s <- density(ppp_90s, bw = bw_opt)
+dens_90s <- density(ppp_90s, bw = bw_opt_90s)
 plot(dens_90s, main = "Density of School Shootings, 1990-1999")
 ```
 ```{r density-00s}
 
-dens_00s <- density(ppp_00s, bw = bw_opt)
+dens_00s <- density(ppp_00s, bw = bw_opt_00s)
 plot(dens_00s, main = "Density of School Shootings, 2000-2009")
 ```
 
 ```{r density-10s}
-
-dens_10s <- density(ppp_10s, bw = bw_opt)
+dens_10s <- density(ppp_10s, bw = bw_opt_10s)
 plot(dens_10s, main = "Density of School Shootings, 2010-2019")
+```
+
+```{r density-90-19}
+dens_90_19 <- density(ppp_90_19, bw = bw_opt_90_19)
+plot(dens_90_19, main = "Density of School Shootings, 1990-2019")
 ```
 
 ```{r log-gaussian-cox}
