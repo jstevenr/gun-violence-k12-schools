@@ -1,16 +1,23 @@
 ---
-title: "Spatial Analysis of School Shootings"
-author: "J Steven Raquel"
-date: "3/10/2022"
+title: "Modeling K-12 school shootings as a clustered point process and an areal process, from 1990-2019"
+
+blinded: 0
+
+authors: 
+- name: J Steven Raquel
+  affiliation: Department of Statistics, University of California, Irvine
+
+abstract: |
+The prevalence of gun violence in schools in the United States has been referred to both as an "epidemic" and a public health crisis, and one that has steadily increased over the past several decades (see Figure \@ref(fig:ts-plot-1990-2019)). The debate on how to curb these tragedies is a solidly partisan issue, with calls for more and stronger gun control laws, as well as more mental health care, sometimes as an alternative to gun control. Concealed carry laws are argued both in favor of, and against and are labeled as both an enabler and a potential deterrent to mass shootings. Apart from the trauma that such an event can bring to a community, there is also resonant fear that such incidents inspire "copycat" events on a local and a larger scale. This spatial analysis attempts to model the incidence of these shootings as a Poisson point process, in order to ascertain whether the locations and events occur with complete spatial randomness. We also model the data in an areal form on a per-state basis so as to compare it against the level of gun control and mental health care, also on a state level.
+
 output: 
-  html_document: 
-      toc: true
-      toc_float: true
+  bookdown::pdf_book: 
+    base_format: rticles::asa_article
+    number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F, warning = F)
-
 library(tidyverse)
 library(lubridate)
 # spatial data libraries
@@ -28,6 +35,7 @@ library(patchwork) # for plotting ggplots
 library(viridis)
 library(RColorBrewer)
 library(classInt)
+library(bookdown)
 ```
 
 ```{r read_incidents_old, eval = F, include = F}
@@ -63,8 +71,7 @@ incidents_f <- incidents_f %>%
 # write.csv(incidents_f2, "ss_incidents2.csv", row.names = F)
 ```
 
-
-```{r reading_data, warnings = F}
+```{r get-perps-weapons, eval = F}
 perps <- read_csv("ss_perps.csv", na = c("", "null", "N/A"), 
                   show_col_types = F)
 weapons <- read_csv("ss_weapons.csv", na = c("", "null", "N/A"),
@@ -83,14 +90,16 @@ weapons_f <- weapons %>%
   dplyr::select(incidentid, weapontype) %>%
   rename(Incident_ID = incidentid, Weapon_Type = weapontype)
 
-incidents_f2 <- read_csv("ss_incidents2.csv", show_col_types =F)
 # adding perpetrator information to the dataset
 incidents_f3 <- left_join(incidents_f2, perps_f, by = "Incident_ID")
 # adding weapon information to the dataset
 incidents_f4 <- left_join(incidents_f3, weapons_f, by = "Incident_ID")
 
-# data on shootings between 1970-2022
-df <- incidents_f2
+```
+
+```{r reading_data, warnings = F}
+df <- read_csv("ss_incidents2.csv",
+                  col_types = "ciDffffffffffffffffdd")
 
 df_9019 <- df %>% filter(Date >= "1990-01-1" & Date <= "2019-12-31")
 df_90S <- df %>% filter(Date >= "1990-01-01" & Date <= "1999-12-31")
@@ -141,23 +150,82 @@ cities_sf <- st_as_sf(cities_df2, coords = c("lon", "lat")) %>%
          y = purrr::map_dbl(geometry,2))
 ```
 
-# Background
+# Data
 
-The prevalence of gun violence in schools in the United States has been referred to both as an "epidemic" and a public health crisis. The debate on how to curb these tragedies is a solidly partisan issue, with calls for more and stronger gun control laws, as well as more mental health care, sometimes as an alternative to gun control. While school shootings have taken place in the US for decades, incidences (and gun control debates) have spiked since the 2000s, notably after the Columbine High school shooting in Littleton, Colorado that took place in 1999. This analysis attempts to trace the prevalence of school shootings in the US over the years, by looking at the spatial correlation of the incidents as well as modeling it as a Poisson point process, in order to ascertain whether the locations and events occur with complete spatial randomness. We also utilized gun control data to see whether the existence or later implementation of these laws had any effect on later incidents. 
+The school shooting data was sourced directly from the "K-12 School Shooting Database" made available by the Center for Homeland Defense and Security (CHDS). The information that comprises the dataset was determined by a specific process which entailed asking what exactly comprises a school shooting. Most shootings that were premeditated and resulted in mass casualties, such as those that occurred at Columbine in 1999, Sandy Hook in 2012, and Stoneman Douglas in 2018, are considered "indiscriminate shootings". Although the original database contains shootings ruled accidental (from misuse of a firearm) as well as incidences of gang-related gun violence on school grounds, among other incidents, we did not opt to consider this data as relevant to this study in particular. 
 
-## Data
+```{r ts-plot-1990-2019, fig.cap = "Time series plot of number of K-12 school shootings per year, from Jan 1990 to Dec 2019."}
+# number of events per month
+df2_9019 <- df_9019 %>% 
+  mutate(month_year = floor_date(Date, "year"))
 
-The school shooting data was sourced directly from the "K-12 School Shooting Database" made available by the Center for Homeland Defense and Security (CHDS). The information that comprises the dataset was determined by a specific process which entailed asking what exactly comprises a school shooting, e.g. whether the encounter happened on school property itself or within a classroom, whether or not the perpetrator was involved with the school in any way, e.g. a gang-related shooting between unaffiliated individuals that occurs after hours on school property, or an accidental discharge of a firearm that results in personal injury, would not be considered school shootings in this context. While incidents of this nature occur within the data, it was a deliberate decision on our part to filter out these incidents so as to hone in one the more specific and cultural recognized definition of a school shooting, which is an attack that takes place on school grounds, in order to target either students or faculty with the intent to cause terror and/or inflict harm on specific individuals. The data goes as far back as 1970 all the way to present day (March 2022 at the time of this writing), but it was of particular interest to look at the data after 1990 since this gives us a window into both the pre- and post-Columbine eras. The data originally only contained the name of the school, as well as the city and state where the events took place, but we were able to use the Google Maps API to source the specific latitude/longitude coordinates of these events, effectively giving us point reference data to model as a point process.
+ts_9019 <- df2_9019  %>% 
+  group_by(month_year) %>%
+  summarize(freq = n())
 
-While the Columbine shooting in 1999 and the Virginia Tech shooting in 2007 (which is not recorded in this dataset on account of having taken place at a university) both recorded very high numbers of casualties and made major headlines, few other incidents in their era seemed to replicate this, despite fears at time that the incidents would inspire copycat tragedies at a similar scale. Conversely, half of the 10 deadliest shootings since 1999 all took place in the 2010s, among them the Sandy Hook and Stoneman Douglas shootings. 
+# count of shootings in Apr 1999
+freq_1999 <- ts_9019$freq[ts_9019$month_year == as.Date("1999-01-01")]
+freq_2006 <- ts_9019$freq[ts_9019$month_year == as.Date("2006-01-01")]
+freq_2012 <- ts_9019$freq[ts_9019$month_year == as.Date("2012-01-01")]
+freq_2018 <- ts_9019$freq[ts_9019$month_year == as.Date("2018-01-01")]
+
+# plot of shootings
+ts_9019 %>% 
+  ggplot(aes(x = month_year, y = freq)) +
+  geom_line(color = "red") +
+  xlab("Date") +
+  ylab("Frequency") + 
+  scale_x_date(date_labels = "%Y", date_breaks = "2 years") + 
+  scale_y_continuous(breaks = seq(0,60, by= 5)) +
+  ggtitle("# of K-12 School Shootings per Year, Jan 1990-Dec 2019") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  # adding points to represent certain major events on the timeline
+  # this is for Columbine, Apr 1999
+  geom_point(aes(x = as.Date("1999-01-01"), y = freq_1999),
+             color = "black", size = 2) +
+  geom_label(aes(x = as.Date("1999-01-01"), y = freq_1999, 
+                label = "Columbine (Apr '99)"),
+             color = "black",
+             nudge_y = -5, nudge_x = -360, size = 3) +
+  # Sandy Hook (Dec 2012)
+  geom_point(aes(x = as.Date("2012-01-01"), y = freq_2012), 
+             color = "black", size = 2) +
+  geom_label(aes(x = as.Date("2012-01-01"), y = freq_2012,
+                 label = "Sandy Hook (Dec '12)"), 
+             color = "black",
+             nudge_y = -2, nudge_x = 1200, size = 3) +
+  geom_point(aes(x = as.Date("2006-01-01"), y = freq_2006),
+             color = "black", size = 2) +
+  geom_label(aes(x = as.Date("2006-01-01"), y = freq_2006,
+                 label = "West Nickel Mines (Oct '06)"),
+             nudge_y = 2.5, color = "black", size = 3) +
+  # Stoneman Douglas (Feb 2018) / Santa Fe (May 2018)
+  geom_point(aes(x = as.Date("2018-01-01"), y = freq_2018),
+             color = "black", size = 2) +
+  geom_label(aes(x = as.Date("2018-01-01"), y = freq_2018,
+                 label = "Stoneman Douglas and Santa Fe (Feb/May '18)"),
+             color = "black",
+             nudge_x = -2800, size = 3)
+
+```
+
+It was a deliberate decision on our part to filter out these incidents as others like it so as to hone in one the more specific and cultural recognized definition of a school shooting, which is an attack that takes place on school grounds, in order to target students, faculty, or passersby with the intent to cause terror and/or inflict harm on specific individuals. Targeted events related to domestic situations (e.g. anger over a break-up), or the escalation of disputes (e.g. fistfights in which one person pulls out a firearm) were also ruled school shootings.  
+
+The database originally goes as far back as 1970 all the way to present day (March 2022 at the time of this writing), but it was of particular interest to look at the data after 1990 since this consolidates the modern era in which access to firearms and the incidence of gun violence in schools is more normalized. It was also decided to leave out data past 2019 as the COVID-19 pandemic which hit the US in 2020 is a huge confounding variable as it caused many schools to institute remote learning which decreased the incidence of shootings on school campuses.
+
+The data originally only contained the name of the school, as well as the city and state where the events took place, but we were able to use the Google Maps API to source the specific latitude/longitude coordinates of these events.
+
+In addition to this school shooting data, we also have gun control data consisting of several columns of binary categorical data as to whether or not a certain law (e.g. a ban on concealed carry, background checks) is instituted in a given state for the years between 1991 and 2020 from StateFirearmLaws.org, as well as mental healthcare data from 2019 courtesy of Mental Health America (MHA), which consists of a ranking of all 50 states and the District of Columbia on their ratio of need for and accessibility to mental healthcare. More information on these resources can be found on their respective websites (see References section). 
 
 # Methods
 
 ## Exploratory Data Analysis
 
-Although we have data dating as far back as 1970, we thought it more prudent to look specifically at the specific time period between the 90s all the way to the end of the 2010s, as a way to "book-end" the different eras of gun violence, in terms of the scale and impact. 
+As a preliminary analysis, we chose to plot this data on both a point and at an areal level, for a number of reasons. For one, modeling the data as a point pattern allows us to test the null hypothesis for complete spatial randomness against the alternative hypothesis of clustering. It allows us to hone in on exactly where within a given state might be considered a "hotspot" for a shooting. Conversely, the areal data allows us to compare the number of incidents in a given state and look at it with respect to the level of gun control and mental healthcare available there as well.
 
-```{r plot-creation, echo = F}
+
+```{r plot-point-pattern-creation, echo = F}
 # looking at 3 decades of school shootings
 # 1990-1999
 ss_plot_90s <- ggplot() + 
@@ -168,7 +236,7 @@ ss_plot_90s <- ggplot() +
 #                  aes(x = x, y = y, label = City_State),
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
   theme(axis.title = element_blank()) +
-  ggtitle("1990-99") +
+  ggtitle("1990-99, Total: 147") +
   theme_bw() +
   theme(
     axis.title = element_blank(),
@@ -189,7 +257,7 @@ ss_plot_00s <- ggplot() +
 #                  aes(x = x, y = y, label = City_State),
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
   theme(axis.title = element_blank()) +
-  ggtitle("2000-09") +
+  ggtitle("2000-09, Total: 186") +
   theme_bw() +
   theme(
     axis.title = element_blank(),
@@ -209,7 +277,7 @@ ss_plot_10s <- ggplot() +
 #  geom_text_repel(data = cities_sf, 
 #                  aes(x = x, y = y, label = City_State),
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
-  ggtitle("2010-19") + 
+  ggtitle("2010-19, Total: 240") + 
   theme_bw() +
   theme(
     axis.title = element_blank(),
@@ -229,7 +297,7 @@ ss_plot_9019 <- ggplot() +
 #  geom_text_repel(data = cities_sf, 
 #                  aes(x = x, y = y, label = City_State),
 #                  hjust = 1, vjust = -0.25, size = 2.5) +
-  ggtitle("1990-2019") + 
+  ggtitle("1990-2019, Total: 573") + 
   theme_bw() +
   theme(
       axis.title = element_blank(),
@@ -242,15 +310,17 @@ ss_plot_9019 <- ggplot() +
       panel.grid.minor = element_blank())
 ```
 
-```{r plots-all-four}
+```{r plots-all-four, fig.cap = "Point pattern data for the three separate decades as well as all 30 years."}
 # patchwork is loaded
-ss_plot_9019 + ss_plot_90s + ss_plot_00s + ss_plot_10s + 
+ss_plot_90s + ss_plot_00s + ss_plot_10s + ss_plot_9019 +
   plot_annotation(
     title = "Shootings in K-12 schools in the US"
   )
 ```
 
-```{r situation-plot}
+As we can see from \@ref(fig:plots-all-four), the total number of shootings per decade has not only steadily increased over the past 30 years, but the events also occur in and around the same places, which gives credence to our hypothesis that the events exhibit a clustered point pattern. We notice in fact, that there are areas that seem relatively untouched by school shootings in the western United States, whereas shootings all across the South, Midwest and the East Coast recur at a frightening rate. While the West Coast is somewhat blighted by school shootings, particularly in the San Francisco and Los Angeles metropolitan areas, along with major cities in the Pacific Northwest), it is not nearly at the rate experience by the other side of the US. 
+
+```{r plot-situation}
 total <- length(df_9019$Incident_ID %>% unique())
 
 situation_count <- df_9019$Situation %>%
@@ -275,7 +345,7 @@ ggplot(situation_count, aes(x = Situation, y = Freq),
   ggtitle("K-12 School Shootings, by Situation, 1990-2019")
 ```
 
-```{r event-counts}
+```{r event-counts-2019}
 df_2019 <- df %>% filter(Date >= "2019-01-01" & Date <= "2019-12-31")
 
 # counting the number of events per state
@@ -294,7 +364,7 @@ us_states2 <- us_states %>%
 
 ```
 
-```{r gun-control}
+```{r gun-control-2019}
 # getting the amount of gun control laws per state
 gun_control_2019 <- gun_control %>%
   rename(NAME = state) %>%
@@ -313,7 +383,7 @@ us_states3 <- us_states %>%
 
 ```
 
-```{r mental-healthcare}
+```{r mental-healthcare-2019}
 mha_2019 <- read.csv("mha_rank_2019.csv", sep = " ") %>% 
   rename(NAME = State.) %>%
   filter(!(NAME %in% c("Alaska", "Hawaii")))
@@ -329,7 +399,7 @@ us_states4 <- us_states %>%
   mutate(mhc_cut = cut(Rank, breaks = mhc_breaks$brks))
 ```
 
-```{r plot-areal}
+```{r plot-areals-2019, fig.cap = "A comparison of the incidence of school shootings against gun control and mental health care, in 2019.Darker shades of red imply more shootings, less gun control laws, and less access to mental healthcare."}
 # RColorBrewer is loaded
 Reds <- brewer.pal(5, "Reds")
 Reds_rev <- Reds[length(Reds):1]
@@ -386,68 +456,19 @@ plot_state_incs +
 # display.brewer.all(n = 5)
 ```
 
+## Areal Data Visualization
 
+Looking at \@ref (fig:plot-areals-2019), we see that despite the conspicuous lack of gun control or adequate mental healthcare in the northwestern United States, e.g. Idaho, Wyoming, Montana, there were few to no school shootings events in 2019, which is consistent with what we saw in the point pattern visualization as well. This may lend credence to a hypothesis that in fact, a lack of gun control laws and/or mental healthcare may not coincide with a greater incidence of shootings at all. 2019 was selected as the year to analyze in this fashion because it was the year with the highest number of shootings between 1990 and 2019.
 
-```{r ts-plot}
-# number of events per month
-df2_9019 <- df_9019 %>% 
-  mutate(month_year = floor_date(Date, "year"))
+Conversely, we do note that many states in the southern region of the US, e.g. Texas, Mississippi, Alabama, do experience greater levels of gun violence in tandem with their lack of gun control or mental healthcare relative to other parts of the country. 
 
-ts_9019 <- df2_9019  %>% 
-  group_by(month_year) %>%
-  summarize(freq = n())
+A subset of the northeastern US shows an interesting pattern in that there were states with absolutely no school shootings (Maine, Vermont, New Hampshire) in 2019 despite a lack of strong gun control, but this was in fact in tandem with a relatively high ranking of access to mental healthcare. 
 
-# count of shootings in Apr 1999
-freq_1999 <- ts_9019$freq[ts_9019$month_year == as.Date("1999-01-01")]
-freq_2006 <- ts_9019$freq[ts_9019$month_year == as.Date("2006-01-01")]
-freq_2012 <- ts_9019$freq[ts_9019$month_year == as.Date("2012-01-01")]
-freq_2018 <- ts_9019$freq[ts_9019$month_year == as.Date("2018-01-01")]
-
-# plot of shootings
-ts_9019 %>% 
-  ggplot(aes(x = month_year, y = freq)) +
-  geom_line(color = "red") +
-  xlab("Date") +
-  ylab("Frequency") + 
-  scale_x_date(date_labels = "%Y", date_breaks = "2 years") + 
-  scale_y_continuous(breaks = seq(0,60, by= 5)) +
-  ggtitle("# of K-12 School Shootings per Year, Jan 1990-Dec 2019") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  # adding points to represent certain major events on the timeline
-  # this is for Columbine, Apr 1999
-  geom_point(aes(x = as.Date("1999-01-01"), y = freq_1999),
-             color = "black", size = 2) +
-  geom_label(aes(x = as.Date("1999-01-01"), y = freq_1999, 
-                label = "Columbine (Apr '99)"),
-             color = "black",
-             nudge_y = -5, nudge_x = -360, size = 3) +
-  # Sandy Hook (Dec 2012)
-  geom_point(aes(x = as.Date("2012-01-01"), y = freq_2012), 
-             color = "black", size = 2) +
-  geom_label(aes(x = as.Date("2012-01-01"), y = freq_2012,
-                 label = "Sandy Hook (Dec '12)"), 
-             color = "black",
-             nudge_y = -2, nudge_x = 1200, size = 3) +
-  geom_point(aes(x = as.Date("2006-01-01"), y = freq_2006),
-             color = "black", size = 2) +
-  geom_label(aes(x = as.Date("2006-01-01"), y = freq_2006,
-                 label = "West Nickel Mines (Oct '06)"),
-             nudge_y = 2.5, color = "black", size = 3) +
-  # Stoneman Douglas (Feb 2018) / Santa Fe (May 2018)
-  geom_point(aes(x = as.Date("2018-01-01"), y = freq_2018),
-             color = "black", size = 2) +
-  geom_label(aes(x = as.Date("2018-01-01"), y = freq_2018,
-                 label = "Stoneman Douglas and Santa Fe (Feb/May '18)"),
-             color = "black",
-             nudge_x = -2800, size = 3)
-
-```
-
+The remainder of this literature will focus on the clustering Poisson point process model for the data, but analysis on an areal level will be left open-ended as potential future work to explore. 
 
 ## Point Pattern Analysis
 
-As with any spatial point pattern analysis, we are concerned with the following three questions, 1) whether the points are located at random, 2) whether they are clustered, and 3) whether they are placed regularly. The hypothesis of _complete spatial randomness_ (CSR) asserts the following:
+With respect to the coordinate-level data, as with any spatial point pattern analysis, we are concerned with the following three questions, 1) whether the points are located at random, 2) whether they are clustered, and 3) whether they are placed regularly. The hypothesis of _complete spatial randomness_ (CSR) asserts the following:
 
 * The number of events in any region $S$ with area $|S|$ follows a Poisson distribution with mean $\lambda |S|$, where $\lambda$ is the intensity, i.e. $\lambda$ does not change over $S$
 * Given $n$ events in $S$, the points $s_i$ are independently located according to the uniform distribution on $S$, i.e. there is no interaction amongst events.
@@ -456,16 +477,24 @@ The intensity function $\lambda(s)$, also known as the first-order property of t
 
 $$\lambda(s) = \lim_{|\Delta s| \to 0} \frac{E[N(\Delta s)]}{| \Delta s|}$$
 
-Firstly we want to ascertain whether the incidences of school shootings are indeed a Poisson process, and if so, determine whether or not the process is _homogeneous_ (where the intensity function $\lambda(s)$ assumes a constant $\lambda$) or _inhomogeneous_. Contextually, this means we are interested in ascertaining whether the spatial pattern of these shootings is random or not, i.e. are they more likely to take place in certain places, or around each other? The intensity function is the expected number of events per unit area.
+Firstly we want to ascertain whether the incidences of school shootings are indeed a Poisson process, and if so, determine whether or not the process is homogeneous (where the intensity function $\lambda(s)$ assumes a constant $\lambda$) or inhomogeneous. The intensity function is the expected number of events per unit area, so a constant $\lambda$ would mean that the events occur at a consistent rate across the whole spatial area. This could be in a patterned fashion, or completely random.
 
 ## Quadrats
 
 While we could estimate the intensity function across the entire area, what we are interested in this particular analysis is to how the intensity varies across different regions contained therein. We do this by splitting up the area into what are referred to as _quadrats_.
 
 ```{r states-ppp, warning = F}
-# sf is loaded
-# raster is loaded
-# spatstat.geom is loaded
+require(readr)
+require(maps)
+require(spatstat)
+require(spatstat.geom)
+
+# reading the data
+# from readr (part of tidyverse)
+df <- read_csv("ss_incidents2.csv",
+                  col_types = "ciDffffffffffffffffdd")
+
+df_9019 <- df %>% filter(Date >= "1990-01-1" & Date <= "2019-12-31")
 
 ## getting shapefile of the US
 us_map <- map("usa",plot=F)
@@ -480,30 +509,42 @@ us_poly <- matrix(cbind(us_boundaries_x[1:6886],us_boundaries_y[1:6886]),
 ## Creating the window of the spatial point pattern.
 us_win <- owin(poly=us_poly)
 
-# creating matrices of the coordinates
-matrix_9019 <- matrix(cbind(df_9019$lon, df_9019$lat),
-                     nrow = length(df_9019$lat), ncol = 2)
+# index of points inside the window
+is_in <- inside.owin(x = df_9019$lon,
+                     y = df_9019$lat,
+                     us_win)
+
+# subsetting the points only inside the window
+df_9019_2 <- df_9019[is_in,]
+
 # creating ppp objects with the coordinates and the windows
-ppp_9019 <- as.ppp(matrix_9019, us_win)
+ppp_9019 <- ppp(x = df_9019$lon, y = df_9019$lat,
+                window = us_win)
 ```
 
-```{r plot-ppp-1990-2019}
+```{r plot-quadrats-1990-2019, fig.cap = "Quadrat plot of the school shooting incidents in whole continental US, 1990-2019"}
 quadrat_9019 <- quadratcount(ppp_9019)
 plot(ppp_9019, axes = F, 
-     main = "Poisson Point Pattern, School Shootings 1990-2019", 
+     main = "Quadrat Plot of Incidents, 1990-2019", 
      cols= rgb(0,0,0,.2), pch = 20)
 plot(quadrat_9019, add = TRUE)
 ```
 
+Figure \@ref(fig:plot-quadrats-1990-2019) demonstrates that a great deal of events occur predominantly particularly in the southern and eastern United States. It is important to note however that within a given quadrat, the number of events contained therein does not give us information about how clustered the events are e.g. the 32 events in the quadrat containing mostly Florida do seem to be distributed rather randomly, whereas the 29 events in the quadrat comprising the north of California and Nevada appear rather clustered. Naturally, the count of events contained within each quadrat is also dependent on the definition of these dimensions, so they are very subject to misleading conclusions based on these dimensions. Naturally since the continental United States is not shaped like a simple polygon, dividing it into a reasonable number of equitable quadrats is not an easy task.
+
+One methodology for testing for clustering is a Monte Carlo quadrat test in which we take a number of simulations of patterns similar to our own, and compare it to the distribution of the pattern exhibited under the null hypothesis i.e. a homogeneous Poisson point pattern. The alternative hypothesis and the test-statistic varies depending on the test. 
+
 ```{r quadrat-test}
-# Monte Carlo
+# Ha: the pattern is not completely random
+q_test_CSR <- quadrat.test(ppp_9019, alternative = "two.sided",
+  method = "MonteCarlo", nsim = 4999, conditional = T)
+
 # Ha: the PP is clustered
-q_test <- quadrat.test(ppp_9019, alternative = "clustered",
+q_test_clustered <- quadrat.test(ppp_9019, alternative = "clustered",
              method = "MonteCarlo", nsim = 4999, conditional = T)
 
-q_test
-plot(q_test, size = 1, 
-     main = "Results of Quadrat Test, per Quadrat")
+q_test_CSR
+q_test_clustered
 ```
 ## Kernel Density
 
@@ -535,28 +576,29 @@ ppp_9019 %mark% (ppp_nn) %>%
   plot(markscale = 1, main = "Stienen diagram, 1990-2019 shootings")
 ```
 
-```{r G-function}
-G_9019 <- Gest(ppp_9019, correction = "best")
-plot(G_9019, main = "G function")
+
+```{r K-function}
 # empirical function is the solid black line
 # dashed red line is theoretical
+K_9019 <- Kest(ppp_9019, correction = "none")
+plot(K_9019, main = "K function")
 ```
 
-# Discussion
+```{r L-function}
+# L_9019 <- Lest(ppp_9019, correction = "none")
+# plot(L_9019, . - r ~ r, main = "L function")
+# env_L <- envelope(ppp_9019, fun = Lest, nsim = 20)
+# plot_env_L <- plot(env_L, . - r ~ r, main = "envelope of L function")
+plot_env_L <- imager::load.image("plot_envelope_L.png")
+plot_env_L
+```
 
-# References
-
-
-
-
-
-
-
-
-
-
-
-
+```{r G-function}
+# empirical function is the solid black line
+# dashed red line is theoretical
+G_9019 <- Gest(ppp_9019, correction = "none")
+plot(G_9019, main = "G function")
+```
 
 ```{R KL-functions, cache = T}
 # 1990s
@@ -574,6 +616,15 @@ env_L <- envelope(ppp_9019, fun = Lest, nsim = 20)
 #plot(env_K, main = "K-function envelope")
 plot(env_L, . - r ~ r, main = "L function envelope")
 ```
+## Modeling the intensity function using categorical covariates
+
+```{r ppm_model, eval = F}
+# inhomogenous Poisson process
+
+# fitting ppm
+fit1 <- ppm(ppp_9019 ~ Bullied + Preplanned, 
+            data = df_9019_2)
+```
 
 ```{r log-gaussian-cox, eval = F}
 logcp_9019 <- lgcp.estK(ppp_9019, c(sigma2 = 10, alpha = 2))
@@ -581,10 +632,29 @@ plot(logcp_9019,
      main = "Fitted K function and theoretical K function \n log Gaussian-Cox process")
 ```
 
-```{r point-process-model, eval = F}
-# fit clustered point process model
-kpppm_9019 <- kppm(ppp_9019)
+```{r cluster-fit}
+clusterfit1 <- clusterfit(ppp_9019, clusters = "Cauchy")
+
 ```
+
+
+# Discussion
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 \newpage
 
