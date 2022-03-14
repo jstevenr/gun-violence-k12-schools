@@ -7,8 +7,16 @@ authors:
 - name: J Steven Raquel
   affiliation: Department of Statistics, University of California, Irvine
 
+keywords:
+- Spatial statistics
+- Poisson point process
+- Areal data
+- mental health
+- gun violence
+- gun control
+
 abstract: |
-The prevalence of gun violence in schools in the United States has been referred to both as an "epidemic" and a public health crisis, and one that has steadily increased over the past several decades (see Figure \@ref(fig:ts-plot-1990-2019)). The debate on how to curb these tragedies is a solidly partisan issue, with calls for more and stronger gun control laws, as well as more mental health care, sometimes as an alternative to gun control. Concealed carry laws are argued both in favor of, and against and are labeled as both an enabler and a potential deterrent to mass shootings. Apart from the trauma that such an event can bring to a community, there is also resonant fear that such incidents inspire "copycat" events on a local and a larger scale. This spatial analysis attempts to model the incidence of these shootings as a Poisson point process, in order to ascertain whether the locations and events occur with complete spatial randomness. We also model the data in an areal form on a per-state basis so as to compare it against the level of gun control and mental health care, also on a state level.
+  The prevalence of gun violence in schools in the United States has been referred to both as an epidemic and a public health crisis, and one that has steadily increased over the past several decades (see Figure \@ref(fig:ts-plot-1990-2019)). The debate on how to curb these tragedies is a solidly partisan issue, with calls for more and stronger gun control laws, as well as more mental health care, sometimes as an alternative to gun control. Concealed carry laws are argued both in favor of, and against and are labeled as both an enabler and a potential deterrent to mass shootings. Apart from the trauma that such an event can bring to a community, there is also resonant fear that such incidents inspire copycat events on a local and a larger scale. This spatial analysis attempts to model the incidence of these shootings as a Poisson point process, in order to ascertain whether the locations and events occur with complete spatial randomness. We also model the data in an areal form on a per-state basis so as to compare it against the level of gun control and mental health care, also on a state level.
 
 output: 
   bookdown::pdf_book: 
@@ -17,7 +25,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, warning = F)
+knitr::opts_chunk$set(echo = F, warning = F, fig.dim = c(6,4))
 library(tidyverse)
 library(lubridate)
 # spatial data libraries
@@ -36,6 +44,8 @@ library(viridis)
 library(RColorBrewer)
 library(classInt)
 library(bookdown)
+library(knitr)
+library(kableExtra)
 ```
 
 ```{r read_incidents_old, eval = F, include = F}
@@ -77,8 +87,6 @@ perps <- read_csv("ss_perps.csv", na = c("", "null", "N/A"),
 weapons <- read_csv("ss_weapons.csv", na = c("", "null", "N/A"),
                     show_col_types = F)
 
-gun_control <- read_csv("gun_control_database.csv", col_types = "cf")
-
 # perpetrator dataset filtered
 perps_f <- perps %>% 
   dplyr::select(incidentid, age, gender, race, schoolaffiliation) %>%
@@ -105,6 +113,8 @@ df_9019 <- df %>% filter(Date >= "1990-01-1" & Date <= "2019-12-31")
 df_90S <- df %>% filter(Date >= "1990-01-01" & Date <= "1999-12-31")
 df_00S <- df %>% filter(Date >= "2000-01-01" & Date <= "2009-12-31")
 df_10S <- df %>% filter(Date >= "2010-01-01" & Date <= "2019-12-31")
+
+gun_control <- read_csv("gun_control_database.csv", col_types = "cf")
 ```
 
 ```{r sf-wrangling}
@@ -318,9 +328,9 @@ ss_plot_90s + ss_plot_00s + ss_plot_10s + ss_plot_9019 +
   )
 ```
 
-As we can see from \@ref(fig:plots-all-four), the total number of shootings per decade has not only steadily increased over the past 30 years, but the events also occur in and around the same places, which gives credence to our hypothesis that the events exhibit a clustered point pattern. We notice in fact, that there are areas that seem relatively untouched by school shootings in the western United States, whereas shootings all across the South, Midwest and the East Coast recur at a frightening rate. While the West Coast is somewhat blighted by school shootings, particularly in the San Francisco and Los Angeles metropolitan areas, along with major cities in the Pacific Northwest), it is not nearly at the rate experience by the other side of the US. 
+As we can see from Figure \@ref(fig:plots-all-four), the total number of shootings per decade has not only steadily increased over the past 30 years, but the events also occur in and around the same places, which gives credence to our hypothesis that the events exhibit a clustered point pattern. We notice in fact, that there are areas that seem relatively untouched by school shootings in the western United States, whereas shootings all across the South, Midwest and the East Coast recur at a frightening rate. While the West Coast is somewhat blighted by school shootings, particularly in the San Francisco and Los Angeles metropolitan areas, along with major cities in the Pacific Northwest), it is not nearly at the rate experience by the other side of the US. 
 
-```{r plot-situation}
+```{r plot-situation, eval = F}
 total <- length(df_9019$Incident_ID %>% unique())
 
 situation_count <- df_9019$Situation %>%
@@ -458,7 +468,7 @@ plot_state_incs +
 
 ## Areal Data Visualization
 
-Looking at \@ref (fig:plot-areals-2019), we see that despite the conspicuous lack of gun control or adequate mental healthcare in the northwestern United States, e.g. Idaho, Wyoming, Montana, there were few to no school shootings events in 2019, which is consistent with what we saw in the point pattern visualization as well. This may lend credence to a hypothesis that in fact, a lack of gun control laws and/or mental healthcare may not coincide with a greater incidence of shootings at all. 2019 was selected as the year to analyze in this fashion because it was the year with the highest number of shootings between 1990 and 2019.
+Looking at Figure \@ref(fig:plot-areals-2019), we see that despite the conspicuous lack of gun control or adequate mental healthcare in the northwestern United States, e.g. Idaho, Wyoming, Montana, there were few to no school shootings events in 2019, which is consistent with what we saw in the point pattern visualization as well. This may lend credence to a hypothesis that in fact, a lack of gun control laws and/or mental healthcare may not coincide with a greater incidence of shootings at all. 2019 was selected as the year to analyze in this fashion because it was the year with the highest number of shootings between 1990 and 2019.
 
 Conversely, we do note that many states in the southern region of the US, e.g. Texas, Mississippi, Alabama, do experience greater levels of gun violence in tandem with their lack of gun control or mental healthcare relative to other parts of the country. 
 
@@ -520,6 +530,8 @@ df_9019_2 <- df_9019[is_in,]
 # creating ppp objects with the coordinates and the windows
 ppp_9019 <- ppp(x = df_9019$lon, y = df_9019$lat,
                 window = us_win)
+
+
 ```
 
 ```{r plot-quadrats-1990-2019, fig.cap = "Quadrat plot of the school shooting incidents in whole continental US, 1990-2019"}
@@ -543,9 +555,12 @@ q_test_CSR <- quadrat.test(ppp_9019, alternative = "two.sided",
 q_test_clustered <- quadrat.test(ppp_9019, alternative = "clustered",
              method = "MonteCarlo", nsim = 4999, conditional = T)
 
-q_test_CSR
-q_test_clustered
+q_test_CSR$p.value
+q_test_clustered$p.value
 ```
+
+
+
 ## Kernel Density
 
 ```{r bandwidth-calculate, cache = T}
@@ -569,11 +584,6 @@ ggplot(data = data.frame(dist = ppp_nn),
        aes(dist)) +
   geom_histogram(binwidth = 0.5)
 
-```
-
-```{r Sienen-diagram}
-ppp_9019 %mark% (ppp_nn) %>%
-  plot(markscale = 1, main = "Stienen diagram, 1990-2019 shootings")
 ```
 
 
@@ -614,16 +624,24 @@ env_L <- envelope(ppp_9019, fun = Lest, nsim = 20)
 ```
 ```{r plot-envelope, eval = F}
 #plot(env_K, main = "K-function envelope")
-plot(env_L, . - r ~ r, main = "L function envelope")
+# plot(env_L, . - r ~ r, main = "L function envelope")
+imager::png("plot_envelope_L.png")
 ```
 ## Modeling the intensity function using categorical covariates
 
 ```{r ppm_model, eval = F}
 # inhomogenous Poisson process
+quad <- quadscheme(ppp_9019)
+x_quad <- x.quad(quad)
+y_quad <- y.quad(quad)
+
+weirdfunction <- function(x,y){ 10 * x^2 + 5 * sin(10 * y) }
+Z_values <- weirdfunction(x_quad, y_quad)
+
 
 # fitting ppm
-fit1 <- ppm(ppp_9019 ~ Bullied + Preplanned, 
-            data = df_9019_2)
+fit1 <- ppm(quad ~ Z, 
+            data = data.frame(Z = Z_values))
 ```
 
 ```{r log-gaussian-cox, eval = F}
@@ -639,22 +657,6 @@ clusterfit1 <- clusterfit(ppp_9019, clusters = "Cauchy")
 
 
 # Discussion
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 \newpage
 
