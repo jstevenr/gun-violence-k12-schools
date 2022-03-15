@@ -33,6 +33,5 @@ viridis
 RColorBrewer
 classInt
 bookdown
-base
 knitr
 kableExtra
