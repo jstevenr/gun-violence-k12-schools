@@ -7,6 +7,8 @@
 \usepackage{textcomp}
 \usepackage[hyphens]{url} % not crucial - just used below for the URL
 \usepackage{hyperref}
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 
 %\pdfminorversion=4
 % NOTE: To produce blinded version, replace "0" with "1" below.
@@ -23,23 +25,22 @@
 
 
 
-% tightlist command for lists without linebreak
-\providecommand{\tightlist}{%
-  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+% Pandoc citation processing
 
-% From pandoc table feature
-\usepackage{longtable,booktabs,array}
-\usepackage{calc} % for calculating minipage widths
-% Correct order of tables after \paragraph or \subparagraph
-\usepackage{etoolbox}
-\makeatletter
-\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
-\makeatother
-% Allow footnotes in longtable head/foot
-\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
-\makesavenoteenv{longtable}
-
-
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
 
 \begin{document}
 
@@ -90,9 +91,7 @@ The prevalence of gun violence in schools in the United States has been referred
 The school shooting data was sourced directly from the ``K-12 School Shooting Database'' made available by the Center for Homeland Defense and Security (CHDS). The information that comprises the dataset was determined by a specific process which entailed asking what exactly comprises a school shooting. Most shootings that were premeditated and resulted in mass casualties, such as those that occurred at Columbine in 1999, Sandy Hook in 2012, and Stoneman Douglas in 2018, are considered ``indiscriminate shootings''. Although the original database contains shootings ruled accidental (from misuse of a firearm) as well as incidences of gang-related gun violence on school grounds, among other incidents, we did not opt to consider this data as relevant to this study in particular.
 
 \begin{figure}
-\centering
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/ts-plot-1990-2019-1.pdf}
-\caption{\label{fig:ts-plot-1990-2019}Time series plot of number of K-12 school shootings per year, from Jan 1990 to Dec 2019.}
+\includegraphics[width=0.65\linewidth,style="float:right; padding:10px]{JStevenRaquel_STATS295_Final_files/figure-latex/ts-plot-1990-2019-1} \caption{Time series plot of number of K-12 school shootings per year, from Jan 1990 to Dec 2019.}\label{fig:ts-plot-1990-2019}
 \end{figure}
 
 It was a deliberate decision on our part to filter out these incidents as others like it so as to hone in one the more specific and cultural recognized definition of a school shooting, which is an attack that takes place on school grounds, in order to target students, faculty, or passersby with the intent to cause terror and/or inflict harm on specific individuals. Targeted events related to domestic situations (e.g.~anger over a break-up), or the escalation of disputes (e.g.~fistfights in which one person pulls out a firearm) were also ruled school shootings.
@@ -112,19 +111,13 @@ In addition to this school shooting data, we also have gun control data consisti
 As a preliminary analysis, we chose to plot this data on both a point and at an areal level, for a number of reasons. For one, modeling the data as a point pattern allows us to test the null hypothesis for complete spatial randomness against the alternative hypothesis of clustering. It allows us to hone in on exactly where within a given state might be considered a ``hotspot'' for a shooting. Conversely, the areal data allows us to compare the number of incidents in a given state and look at it with respect to the level of gun control and mental healthcare available there as well.
 
 \begin{figure}
-\centering
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plots-all-four-1.pdf}
-\caption{\label{fig:plots-all-four}Point pattern data for the three separate decades as well as all 30 years.}
+\includegraphics[width=0.65\linewidth,style="float:right; padding:10px]{JStevenRaquel_STATS295_Final_files/figure-latex/plots-all-four-1} \caption{Point pattern data for the three separate decades as well as all 30 years.}\label{fig:plots-all-four}
 \end{figure}
 
 As we can see from Figure \ref{fig:plots-all-four}, the total number of shootings per decade has not only steadily increased over the past 30 years, but the events also occur in and around the same places, which gives credence to our hypothesis that the events exhibit a clustered point pattern. We notice in fact, that there are areas that seem relatively untouched by school shootings in the western United States, whereas shootings all across the South, Midwest and the East Coast recur at a frightening rate. While the West Coast is somewhat blighted by school shootings, particularly in the San Francisco and Los Angeles metropolitan areas, along with major cities in the Pacific Northwest), it is not nearly at the rate experience by the other side of the US.
 
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-situation-1.pdf}
-
 \begin{figure}
-\centering
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-areals-2019-1.pdf}
-\caption{\label{fig:plot-areals-2019}A comparison of the incidence of school shootings against gun control and mental health care, in 2019.Darker shades of red imply more shootings, less gun control laws, and less access to mental healthcare.}
+\includegraphics[width=0.65\linewidth,style="float:right; padding:10px]{JStevenRaquel_STATS295_Final_files/figure-latex/plot-areals-2019-1} \caption{A comparison of the incidence of school shootings against gun control and mental health care, in 2019.Darker shades of red imply more shootings, less gun control laws, and less access to mental healthcare.}\label{fig:plot-areals-2019}
 \end{figure}
 
 \hypertarget{areal-data-visualization}{%
@@ -158,71 +151,36 @@ The intensity function \(\lambda(s)\), also known as the first-order property of
 Firstly we want to ascertain whether the incidences of school shootings are indeed a Poisson process, and if so, determine whether or not the process is homogeneous (where the intensity function \(\lambda(s)\) assumes a constant \(\lambda\)) or inhomogeneous. The intensity function is the expected number of events per unit area, so a constant \(\lambda\) would mean that the events occur at a consistent rate across the whole spatial area. This could be in a patterned fashion, or completely random.
 
 \hypertarget{quadrats}{%
-\subsection{Quadrats}\label{quadrats}}
+\subsubsection{Quadrats}\label{quadrats}}
 
 While we could estimate the intensity function across the entire area, what we are interested in this particular analysis is to how the intensity varies across different regions contained therein. We do this by splitting up the area into what are referred to as \emph{quadrats}.
 
 \begin{figure}
-\centering
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-quadrats-1990-2019-1.pdf}
-\caption{\label{fig:plot-quadrats-1990-2019}Quadrat plot of the school shooting incidents in whole continental US, 1990-2019}
+\includegraphics[width=0.65\linewidth,style="float:right; padding:10px]{JStevenRaquel_STATS295_Final_files/figure-latex/plot-quadrats-1990-2019-1} \caption{Quadrat plot of the school shooting incidents in whole continental US, 1990-2019}\label{fig:plot-quadrats-1990-2019}
 \end{figure}
 
 Figure \ref{fig:plot-quadrats-1990-2019} demonstrates that a great deal of events occur predominantly particularly in the southern and eastern United States. It is important to note however that within a given quadrat, the number of events contained therein does not give us information about how clustered the events are e.g.~the 32 events in the quadrat containing mostly Florida do seem to be distributed rather randomly, whereas the 29 events in the quadrat comprising the north of California and Nevada appear rather clustered. Naturally, the count of events contained within each quadrat is also dependent on the definition of these dimensions, so they are very subject to misleading conclusions based on these dimensions. Naturally since the continental United States is not shaped like a simple polygon, dividing it into a reasonable number of equitable quadrats is not an easy task.
 
 One methodology for testing for clustering is a Monte Carlo quadrat test in which we take a number of simulations of patterns similar to our own, and compare it to the distribution of the pattern exhibited under the null hypothesis i.e.~a homogeneous Poisson point pattern. The alternative hypothesis and the test-statistic varies depending on the test.
 
-\begin{verbatim}
-## 
-##  Conditional Monte Carlo test of CSR using quadrat counts
-##  Test statistic: Pearson X2 statistic
-## 
-## data:  ppp_9019
-## X2 = 582.1, p-value = 4e-04
-## alternative hypothesis: two.sided
-## 
-## Quadrats: 23 tiles (irregular windows)
-\end{verbatim}
-
-\begin{verbatim}
-## 
-##  Conditional Monte Carlo test of CSR using quadrat counts
-##  Test statistic: Pearson X2 statistic
-## 
-## data:  ppp_9019
-## X2 = 582.1, p-value = 2e-04
-## alternative hypothesis: clustered
-## 
-## Quadrats: 23 tiles (irregular windows)
-\end{verbatim}
+\begin{table}[!h]
+\centering
+\resizebox{\linewidth}{!}{
+\begin{tabular}[t]{llrrl}
+\toprule
+H0 & HA & Test\_Statistic & p\_value & Conclusion\\
+\midrule
+\cellcolor{gray!6}{X is a homogeneous Poisson process} & \cellcolor{gray!6}{X is not a homogeneous Poisson process} & \cellcolor{gray!6}{582.1008} & \cellcolor{gray!6}{4e-04} & \cellcolor{gray!6}{reject H0}\\
+X is a homogeneous Poisson process & X is a clustered point pattern & 582.1008 & 2e-04 & reject H0\\
+\bottomrule
+\end{tabular}}
+\end{table}
 
 \hypertarget{kernel-density}{%
-\subsection{Kernel Density}\label{kernel-density}}
-
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/density-90-19-1.pdf}
+\subsubsection{Kernel Density}\label{kernel-density}}
 
 \hypertarget{nearest-neighbor}{%
-\subsection{Nearest Neighbor}\label{nearest-neighbor}}
-
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/nearest-neighbor-1.pdf}
-
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/Sienen-diagram-1.pdf}
-
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/K-function-1.pdf}
-
-\begin{verbatim}
-## Registered S3 method overwritten by 'imager':
-##   method      from
-##   plot.imlist
-\end{verbatim}
-
-\begin{verbatim}
-## Image. Width: 664 pix Height: 664 pix Depth: 1 Colour channels: 3
-\end{verbatim}
-
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/G-function-1.pdf}
-
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/KL-functions-1.pdf}
+\subsubsection{Nearest Neighbor}\label{nearest-neighbor}}
 
 \hypertarget{modeling-the-intensity-function-using-categorical-covariates}{%
 \subsection{Modeling the intensity function using categorical covariates}\label{modeling-the-intensity-function-using-categorical-covariates}}
@@ -239,6 +197,5 @@ One methodology for testing for clustering is a Monte Carlo quadrat test in whic
 
 \bibliographystyle{agsm}
 \bibliography{}
-
 
 \end{document}
