@@ -1,11 +1,29 @@
 ---
-title: "Spatial modeling of K-12 school shootings from 1990-2019 as a Matern clustered point process"
+title: "Spatial modeling of K-12 school shootings as a Matern clustered point process"
+subtitle: "STATS 295 Winter 2022 Spatial Analysis" 
 author: J Steven Raquel
-output: pdf_document
+affiliation: University of California, Irvine
+geometry: "margin=0.5in"
+fontsize: 12pt
+header-includes:
+  - \usepackage{setspace}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+output: 
+  pdf_document:
+    extra_dependencies: "subfig"
+    keep_tex: true
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, warning = F, results = 'asis',fig.height = 3, fig.width = 6)
+knitr::opts_chunk$set(echo = F, warning = F, results = 'asis', include = T,
+                      fig.width = 6, fig.height = 3)
 library(tidyverse)
 library(lubridate)
 # spatial data libraries
@@ -115,80 +133,17 @@ sf_10S <- st_as_sf(df_10S, coords = c("lon", "lat")) %>%
 
 # Introduction
 
-The prevalence of gun violence in schools in the United States has been referred to both as an epidemic and a public health crisis, and one that has steadily increased over the past several decades. Apart from the trauma that such an event can bring to a community, there is also resonant fear that such incidents inspire copycat events on a local and a larger scale. This spatial analysis attempts to model the incidence of these shootings as a Poisson point process, in order to ascertain whether the locations and events occur with complete spatial randomness, and thereafter create a model with which these events can be predicted. Ultimately, a Cox Matern cluster process model was decided upon, which lead us to conclude that in fact, school shooting events do give rise to future school shootings around them. This spatial analysis seeks to model on a spatial level these incidences, so that we can better understand where these tragedies are likely to happen such that we can avert them and make the country a safer place for young people.
+The prevalence of gun violence in schools in the United States has been referred to both as an epidemic and a public health crisis, and one that has steadily increased over the past several decades. Apart from the trauma that such an event can bring to a community, there is also resonant fear that such incidents inspire copycat events on a local and a larger scale. This spatial analysis attempts to model the incidence of these shootings as a Poisson point process, in order to ascertain whether the locations and events occur with complete spatial randomness, and thereafter create a model with which these events can be predicted. Ultimately, a Cox Matern cluster process model was decided upon, which lead us to conclude that school shooting events may in fact give rise to future school shootings around them. 
 
 # Methods
 
 ## Data
 
-The school shooting data was sourced directly from the "K-12 School Shooting Database" made available by the Center for Homeland Defense and Security (CHDS), and was specifically subset to between the years of 1990-2019. The information that comprises the dataset was determined by a specific process which entailed asking what exactly comprises a school shooting. Although the original database contains shootings ruled accidental (from misuse of a firearm) as well as incidences of gang-related gun violence on school grounds, among other incidents, we did not opt to consider this data as relevant to this study in particular. Targeted events related to domestic situations, or the escalation of disputes (e.g. fistfights in which one person pulls out a firearm) were also ruled school shootings for the purposes of this study. 
+The data was sourced directly from the K-12 School Shooting Database made available by the Center for Homeland Defense and Security, and was specifically subset to between the years of 1990-2019. The information that comprises the dataset was determined by a specific process which entailed asking what exactly comprises a school shooting. Although the original database contains shootings ruled accidental (from misuse of a firearm) as well as incidences of gang-related gun violence on school grounds, among other incidents such as suicide, we did not opt to consider this data as relevant to this study in particular. Targeted events related to domestic situations, or the escalation of disputes (e.g. fistfights in which one person pulls out a firearm) were also ruled school shootings for the purposes of this study. 
 
 ## Exploratory Data Analysis
 
 ```{r plot-point-pattern-creation, echo = F}
-# looking at 3 decades of school shootings
-# 1990-1999
-ss_plot_90s <- ggplot() + 
-  geom_sf(data = us_states) +
-  geom_sf(data = sf_90S, size = 0.75, col = "red") + 
-#  geom_sf(data = cities_sf, color = "black", size = 1) +
-#  geom_text_repel(data = cities_sf, 
-#                  aes(x = x, y = y, label = City_State),
-#                  hjust = 1, vjust = -0.25, size = 2.5) +
-  theme(axis.title = element_blank()) +
-  ggtitle("1990-99, Total: 147") +
-  theme_bw() +
-  theme(
-    axis.title = element_blank(),
-    axis.text.x = element_blank(), 
-    axis.ticks.x = element_blank(), 
-    axis.text.y = element_blank(),  
-    axis.ticks.y = element_blank(),
-    panel.border = element_blank(), 
-    panel.grid.major = element_blank(), 
-    panel.grid.minor = element_blank())
-
-# 2000-2009
-ss_plot_00s <- ggplot() + 
-  geom_sf(data = us_states) +
-  geom_sf(data = sf_00S, size = 0.75, col = "red") + 
-#  geom_sf(data = cities_sf, color = "black", size = 1) +
-#  geom_text_repel(data = cities_sf, 
-#                  aes(x = x, y = y, label = City_State),
-#                  hjust = 1, vjust = -0.25, size = 2.5) +
-  theme(axis.title = element_blank()) +
-  ggtitle("2000-09, Total: 186") +
-  theme_bw() +
-  theme(
-    axis.title = element_blank(),
-    axis.text.x = element_blank(), 
-    axis.ticks.x = element_blank(), 
-    axis.text.y = element_blank(),  
-    axis.ticks.y = element_blank(),
-    panel.border = element_blank(), 
-    panel.grid.major = element_blank(), 
-    panel.grid.minor = element_blank())
-
-# 2010-2019
-ss_plot_10s <- ggplot() + 
-  geom_sf(data = us_states) +
-  geom_sf(data = sf_10S, size = 0.75, col = "red") + 
-#  geom_sf(data = cities_sf, color = "black", size = 1) +
-#  geom_text_repel(data = cities_sf, 
-#                  aes(x = x, y = y, label = City_State),
-#                  hjust = 1, vjust = -0.25, size = 2.5) +
-  ggtitle("2010-19, Total: 240") + 
-  theme_bw() +
-  theme(
-    axis.title = element_blank(),
-    axis.text.x = element_blank(), 
-    axis.ticks.x = element_blank(), 
-    axis.text.y = element_blank(),  
-    axis.ticks.y = element_blank(),
-    panel.border = element_blank(), 
-    panel.grid.major = element_blank(), 
-    panel.grid.minor = element_blank())
-
 # 1990-2019
 ss_plot_9019 <- ggplot() + 
   geom_sf(data = us_states) +
@@ -210,22 +165,24 @@ ss_plot_9019 <- ggplot() +
       panel.grid.minor = element_blank())
 ```
 
-```{r plots-all-four}
+```{r plot-point-pattern-9019}
 # patchwork is loaded
-ss_plot_90s + ss_plot_00s + ss_plot_10s + ss_plot_9019 +
+ss_plot_9019 +
   plot_annotation(
     title = "K-12 school shootings in the US",
     caption = "Source: The Department of Homeland Security."
   )
 ```
 
-As we can see from the plot above, the total number of shootings per decade has not only steadily increased over the past 30 years, but the events also occur in and around the same places, which gives credence to our hypothesis that the events exhibit a clustered pattern. We notice in fact, that there are areas that seem relatively untouched by school shootings in the western United States, whereas shootings all across the South, Midwest and the East Coast recur a great deal. While the West Coast is somewhat blighted by school shootings, particularly in the San Francisco and Los Angeles metropolitan areas, along with major cities in the Pacific Northwest), it is not nearly at the rate experienced by the other side of the US. 
+As we can see from the plot above, these events tend to occur in and around the same places, which gives credence to our hypothesis that the events exhibit a clustered pattern. We notice in fact, that there are areas that seem relatively untouched by school shootings in the western United States, whereas shootings all across the South, Midwest and the East Coast recur a great deal. While the West Coast is somewhat blighted by school shootings, particularly in the San Francisco and Los Angeles metropolitan areas, along with major cities in the Pacific Northwest), it is not nearly at the rate experienced by the other side of the US. 
 
-One thing that it is important to note, as with many spatial analyses that relate to events caused by humans, that the rate of these events do have a high correlation with population density, i.e. there are more observations of school shooting events in areas where many people live. While the implications of this unfortunately will not be well explored in this literature, it is important to take note of as a confounding factor when asking questions about the frequency of these events. 
+One thing that it is important to note, as with many spatial analyses that relate to events caused by humans, that the rate of these events do correlate in areas with high population density, i.e. there are more observations of school shooting events in areas where many people live. While the implications of this unfortunately will not be well explored in this literature, it is important to take note of as a confounding factor when asking questions about the frequency of these events. 
 
 ## Point Pattern Analysis
 
-With respect to the coordinate-level data, as with any spatial point pattern analysis, we are concerned with the following three questions, 1) whether the points are located at random, 2) whether they are clustered, and 3) whether they are placed regularly. The hypothesis of _complete spatial randomness_, or a homogeneous Poisson process, asserts the following:
+With respect to the coordinate-level data, as with any spatial point pattern analysis, we are concerned with the following three questions, 1) whether the points are located at random, 2) whether they are clustered, and 3) whether they are placed regularly. Clustering and regular point patterns respectively are the two opposite ends of the behavior of a point pattern whereas complete spatial randomness is in the middle.
+
+The hypothesis of _complete spatial randomness_, or a homogeneous Poisson process, asserts the following:
 
 * The number of events in any region $S$ with area $|S|$ follows a Poisson distribution with mean $\lambda |S|$, where $\lambda$ is the intensity, i.e. $\lambda$ does not change over $S$
 * Given $n$ events in $S$, the points $s_i$ are independently located according to the uniform distribution on $S$, i.e. there is no interaction amongst events.
@@ -234,7 +191,11 @@ The intensity function $\lambda(s)$, also known as the first-order property of t
 
 $$\lambda(s) = \lim_{|\Delta s| \to 0} \frac{E[N(\Delta s)]}{| \Delta s|}$$
 
-Firstly we want to ascertain whether the incidences of school shootings are indeed a Poisson process, and if so, determine whether or not the process is homogeneous or inhomogeneous. 
+In a homogeneous Poisson process the distribution of events is scattered all throughout the space such that there are no clusters anywhere nor any consistent pattern (an example can be seen in the Appendix). We want to test formally that the data does not follow such a distribution. We can do this visually first by mapping the density of the data across the spatial domain.
+
+### Kernel Density
+
+We can visually ascertain as to whether the point pattern $X$ is homogeneous by looking at the plot of the Gaussian kernel smoothed intensity function, which appears as a heatmap. Density based mesasures look at the first order property of the process, the intensity function, which illustrates how observations vary from place to place due to the underlying property, whereas the second order property illustrates how observations vary from place to place due to interaction effects between observations themselves (Gimond).
 
 ```{r create-ppp, warning = F}
 # reading the data
@@ -260,32 +221,13 @@ ppp_9019 <- ppp(x = df_9019$lon, y = df_9019$lat,
                 marks = df_9019 %>% dplyr::select(Preplanned))
 ```
 
-```{r plot-simulate-ppm}
-# homogenous poisson process
-fit_hpp <- ppm(ppp_9019 ~ 1)
-sim1 <- simulate(fit_hpp)
-plot(sim1, use.marks = F,
-     main = "Simulation of an inhomogeneous Poisson process")
-```
-This plot demonstrates but an example of what a homogeneous Poisson process, which has complete spatial randomness, would look like. We note that the distribution of events is scattered all throughout the space such that there are no clusters anywhere, and moreover we do not see any specific pattern in their distribution. We want to test formally that the data does not follow such a distribution. This is in pursuit of our ultimate goal of creating a model that can accurately demonstrate the distribution of these events.
-
-### Kernel Density
-
-One method by which we can visually ascertain as to whether the point pattern $X$ is homogeneous is by looking at the plot of the Gaussian kernel smoothed intensity function, which appears as a heatmap. Density based mesasures look at the first order property of the process, which illustrate how observations vary from place to place due to the underlying property, whereas the second order property illustrates how observations vary from place to place due to interaction effects between observations themselves (Gimond).
-
-The smoothing bandwidth $\sigma$, the standard deviation of the isotropic Gaussian kernel, is chosen to minimise the mean square error (MSE) as defined by Diggle (1985), which is calculated as follows
-
-$$MSE(\sigma) = MSE(\sigma)/\lambda^2 - g(0)$$
-
-where $\lambda$ is the mean intensity and $g$ is the pair correlation function.
-
 ```{r bandwidth-calculate, cache = T}
 # optimal bandwidth for the kernel density of each point pattern
 bw_opt_9019 <- bw.diggle(ppp_9019)
 ```
 
 
-```{r density-90-19}
+```{r density-90-19, fig.pos = "H"}
 par(mfrow = c(1, 1)) # 2 rows 1 column
 # heatmap of events in general
 dens_9019 <- density.ppp(ppp_9019, bw = bw_opt_9019)
@@ -293,27 +235,24 @@ plot(dens_9019, main = "Heatmap of School Shootings, 1990-2019")
 contour(dens_9019, add = T)
 ```
 
-Based on this heatmap of the density function, we note that clustering is most strong around the south, namely Florida, as well as in the northeastern United States around New York. The same is also true for the Pacific Northwest. 
+Based on this heatmap of the density function, we note that clustering is most strong around the south, namely Florida, as well as in the northeastern United States around New York, where the density is at least 2. Conversely the density on the west coast is much lower at around 0.5 along the California coast and the Pacific Northwest. The center of the US however, is relatively untouched by these events according to this map.
 
 ### Quadrats
 
-While we could estimate the intensity function across the entire area, what we are interested in this particular analysis is to how the intensity varies across different regions contained therein. We do this by splitting up the area into what are referred to as _quadrats_, small subsets of the event space, and counting the number of events contained within each quadrat. We can test against the hypothesis of complete spatial randomness by generating a test statistic based on the number of expected vs observed events in each quadrat. The quadrat plot is given by the following plot:
+What we are interested in this particular analysis is to how the intensity varies across different regions contained therein. We do this by splitting up the area into what are referred to as _quadrats_, small subsets of the event space, and counting the number of events contained within each quadrat. We can test against the hypothesis of complete spatial randomness by generating a $\chi^2$ test statistic based on the number of expected vs observed events in each quadrat. The quadrat plot of this process can be seen in the Appendix.
 
-```{r plot-quadrats-1990-2019}
-quadrat_9019 <- quadratcount(ppp_9019)
-plot(ppp_9019, axes = F, 
-     main = "Quadrat Plot of Incidents, 1990-2019", 
-     cols= rgb(0,0,0,.2), pch = 20,
-     use.marks = F)
-plot(quadrat_9019, add = TRUE)
-```
+It's important to note the count of events contained within each quadrat is dependent on the definition of these dimensions, so they can be subject to misleading conclusions as a result. Since the continental United States is not shaped like a simple polygon, dividing it into a reasonable number of equitable and reasonably defined quadrats is not an easy task and this is a shortcoming we have to recognize. 
 
-It is important to note however that within a given quadrat, the number of events contained therein does not give us information about how clustered the events are inside that quadrat itself. Furthermoe,the count of events contained within each quadrat is also dependent on the definition of these dimensions, so they can be subject to misleading conclusions as a result. Since the continental United States is not shaped like a simple polygon, dividing it into a reasonable number of equitable and reasonably defined quadrats is not an easy task and this is a shortcoming we have to recognize. 
+One methodology for testing for clustering is a Monte Carlo quadrat test in which we take a number of simulations of patterns under the null hypothesis e.g. the homogeneous Poisson point pattern we observed, and compute a Pearson's $\chi^2$ test statistic based on the expected and observed counts in each quadrat, and their residuals. The alternative hypothesis varies depending on the test, but we want to determine specifically whether 1) the pattern is homogeneous or not and 2) whether the pattern is clustered. 
 
-One methodology for testing for clustering is a Monte Carlo quadrat test in which we take a number of simulations of patterns under the null hypothesis e.g. the homogeneous Poisson point pattern we observed, and compute a $\chi^2$ test statistic based on the expected and observed counts in each quadrat, and their residuals. The alternative hypothesis varies depending on the test, but we want to determine specifically whether 1) the pattern is homogeneous or not and 2) whether the pattern is clustered. 
+The $\chi^2$ test statistic is given as follows 
+
+$$\chi^2 = \sum_{i=1}^n \frac{(O_i - E_i)^2}{E_i}$$
+
+where $O_i$ is the number of observed events, $E_i$ is the number of expected events under the null hypothesis $H_0$ of complete spatial randomness, and $n$ is the total number of events. 
 
 ```{r tbl-quadrat-test, resuts = 'asis'}
-# Ha: the pattern is not completely random
+# Ha: the pattern is not a homogeneous Poisson process with CSR
 q_test_CSR <- quadrat.test(ppp_9019, alternative = "two.sided",
   method = "MonteCarlo", nsim = 4999)
 
@@ -323,9 +262,9 @@ q_test_clustered <- quadrat.test(ppp_9019, alternative = "clustered",
              method = "MonteCarlo", nsim = 4999)
 
 # hypotheses
-hyp_null <- c("$X$ is a homogeneous Poisson process")
-hyp_alt1 <- c("$X$ is not a homogeneous Poisson process")
-hyp_alt2 <- c("$X$ is a clustered point pattern")
+hyp_null <- c("X is a homogeneous Poisson process")
+hyp_alt1 <- c("X is not a homogeneous Poisson process")
+hyp_alt2 <- c("X is a clustered point pattern")
 
 # data.frame of what will be in the table
 q_test_df <- data.frame(H0 = rep(hyp_null, 2), 
@@ -334,11 +273,12 @@ q_test_df <- data.frame(H0 = rep(hyp_null, 2),
                                            q_test_clustered$statistic),
                         p_value = c(q_test_CSR$p.value, 
                                     q_test_clustered$p.value),
-                        Conclusion = c("reject $H_0$", "reject $H_0$"))
+                        Conclusion = c("reject H0", "reject H0"))
 
 # plotting kable
 q_test_df %>% 
   kbl(
+    caption = "The results of the quadrat tests of the point process.",
     format = "latex",
     booktabs = T,
       col.names = c("Null hypothesis", "Alternative hypothesis", 
@@ -348,33 +288,32 @@ q_test_df %>%
 
 Based on this table, we have the results of two separate quadrat tests for our point pattern $X$, with the null hypothesis of complete spatial randomness against the corresponding alternative hypotheses of 1) $X$ not being a homogeneous Poisson process and 2) $X$ being a clustered point pattern.
 
-In both cases, our test returns a corresponding p-value of approximately zero, so we have evidence to reject $H_0$ in both cases and conclude that we have respectively in $X$, an inhomogeneous Poisson process, and a clustered point pattern. 
+In both cases, our test returns a corresponding p-value of approximately zero, so we have evidence to reject $H_0$ in both cases and conclude that we have respectively in $X$ not only an inhomogeneous Poisson process but a clustered point pattern as well. We can further illustrate this via Ripley's K-function, or more specifically, a transformation of it.
 
 ### Ripley's K-function and the G-function
 
-Ripley's K-function of a point process is defined so that $\lambda K(r)$ equals the expected number of additional random points within a distance $r$ of a typical random point of the point process $X$, and is determined by the second order moment properties of $X$. Deviations between the empirical and theoretical K function give us evidence of spatial clustering or regularity.
+Ripley's K-function of a point process is defined so that $\lambda K(r)$ equals the expected number of additional random points within a distance $r$ of a typical random point of the point process $X$, and is determined by the second order moment properties of $X$. Deviations between the empirical and theoretical K-function give us evidence of spatial clustering or regularity.
 
-$$K(r) = \lambda r ^2, \lambda_2(r) = \lambda^2$$
+$$K(r) = \pi r ^2$$
 
-There are various transformations of the K-function, for example the L-function proposed by Julian Besag, which stabilizes the variance, or the G-function, which is the cumulative distribution function of the distance from a typical random point of $X$ to the nearest other point of $X$. The G-function allows us to visually test for clustering on top of testing for deviation from complete spatial randomness (CSR). Moreover, the K and L-functions are rather computationally expensive relative to the G-function for this many events, so it will be our function of choice to demonstrate here. 
+There are various transformations of the K-function, for example the L-function proposed by Julian Besag, which stabilizes the variance, or the G-function, which is the cumulative distribution function of the distance from a typical random point of $X$ to the nearest other point of $X$, which is particularly effective in diagnosing clustering behavior in a point process. 
 
 The G-function is given by
 
-$$G(r) = 1 - \exp(-\lambda  \pi r^2) = 1 - \exp(-\pi K(r))$$
+$$G(r) = 1 - \exp(-\lambda  \pi r^2) = 1 - \exp(-\lambda K(r))$$
 
-We can generate an "envelope" of simulated G-functions based on a random Poisson point pattern, and compare our empirical G-function from the data to ascertain whether the point pattern $X$ has complete spatial randomness, and to diagnose whether the point pattern is clustered. 
+We can generate an "envelope" of simulated G-functions based on a spatially random Poisson point pattern, and compare our empirical G-function from the data to ascertain whether the point pattern $X$ has complete spatial randomness or if it is clustered. 
 
 ```{r G-envelope}
 env_G <- envelope(ppp_9019, fun = Gest, verbose = F)
 ```
 
-```{r plot-G-function}
-par(mfrow = c(1,1))
+```{r plot-G-function, fit.pos = "H"}
 plot_env_G <- plot(env_G, main = "envelope of G function",
                    xlim = c(0,2))
 ```
 
-Contained in this figure we do see a marked difference between the respective G-functions of the empirical Poisson point process, and that of the theoretical point process which exhibits complete spatial randomness. Namely the empirical G-function exceeds the theoretical G-function up to approximately $r = 1$, after which point it crosses the envelope of the point process which exhibits CSR and emerges underneath it. A G-function predominantly underneath the envelope would be considered a regular point pattern, but we feel this plot moreso represents evidence towards it being clustered, which is corroborated by the results of the quadrat test earlier.
+Contained in this figure we do see a marked difference between the empirical G-function exceeds the theoretical G-function up to approximately $r = 1$, after which point it crosses the envelope of the point process which exhibits CSR and emerges underneath it. This does give us  evidence that the underlying point process is clustered, which agrees with the earlier conclusion of our quadrat test.
 
 ## Modeling
 
@@ -382,7 +321,9 @@ Contained in this figure we do see a marked difference between the respective G-
 
 Given that we have confirmed via the quadrat tests and G-function that the Poisson process is inhomogeneous as well as clustered, our goal at this point is to develop a model with which we can estimate the intensity function $\lambda(s)$. 
 
-There are two different methods that we can model this clustered process: the first. the inhomogeneous Poisson process, assumes that the process varies spatially as a function of certain covariates, and assumes that the events themselves are independent. The second method, the Cox process, which is itself a generalization of the inhomogeneous Poisson process, treats the intensity function $\lambda(s)$ itself as a stochastic process that we can model in the same manner as the first method. The latter also assumes that the events are not independent of each other. A more benign example of such a process might be the growth of a forest, since trees leave seeds around them which then can grow into even more trees.
+There are two different methods that we can model this clustered process: the first, the inhomogeneous Poisson process, assumes that the process varies spatially as a function of certain covariates, and assumes that the events themselves are independent. In this context an inhomogeneous Poisson process assumes that the rate of school shootings (independently) varies across the spatial domain, which is the continental United States.
+
+The second method, the Cox process, which is itself a generalization of the inhomogeneous Poisson process, treats the intensity function $\lambda(s)$ itself as a stochastic process that we can model in the same manner as the first method. The latter also assumes that the events are not independent of each other. A more benign example of such a process might be the growth of a forest, since trees leave seeds around them which then can grow into even more trees. In this context, a Cox process model assumes that one school shooting event can create even more.
 
 For an inhomogeneous Poisson process, given the number of events $N(B)$ in a subset $B$ of the spatial domain $S$, the likelihood of an inhomogeneous point process is given by
 
@@ -398,7 +339,7 @@ $$\log (\lambda(s)) = \sum_{j=1}^p \beta_j x_j(s)$$
 
 where $x_j(s), j = 1,...p$ are $p$ covariates, such that the log-likelihood is a function of the parameter coefficients $\beta_j$.
 
-Here we fit a clustered inhomogeneous Poisson point process model, using the Matern cluster algorithm. We do not use any other covariates other than the coordinates in this model. We want to analyze the K-function based on this fitted model so that we can diagnose it and proceed. 
+We fit a clustered inhomogeneous Poisson point process model, using the Matern cluster algorithm. We do not use any other covariates other than the coordinates in this model. We can use the same methodology of a quadrat test as we enacted earlier to test the model's appropriateness, except this time the model under the null hypothesis $H_0$ follows that of the estimated intensity function $\lambda(s)$ of our fitted model, rather than that of a homogeneous Poisson process. Our alternative hypothesis $H_A$ is that the true underlying pattern is more clustered than that of the null model. Once can refer to the Appendix for a plot of the envelope of the K-function of this null model which illustrates this point. 
 
 ```{r fit2-kppm}
 ppp_9019_um <- unmark(ppp_9019)
@@ -406,21 +347,43 @@ fit2 <- kppm(ppp_9019_um ~ x + y, "MatClust")
 fit2_sum <- summary(fit2)
 ```
 
-```{r fit2-diagnostic, cache = T}
-fit2_env <- envelope(ppp_9019_um, fun = Kinhom,
-                     funarges = list(lambda=fit2),
-                     global = T, nsim = 10, verbose = F)
+```{r fit2-quadrat-test}
+# H0: the empirical ppp is explained by the intensity function under fit2
+# HA: the ppp is more clustered than the model under the null
+fit2_test <- quadrat.test(ppp_9019, 
+             lambda = fit2$lambda,
+             method = "MonteCarlo",
+             alternative = "clustered")
+
+col1 <- c("H0", "HA", "Test Statistic", "p-Value", "Conclusion")
+col2 <- c("The pattern is explained by the intensity function of the fitted model.",
+          "The pattern is more clustered than that explained by the intensity function of the fitted model.",
+          fit2_test$statistic,
+          fit2_test$p.value,
+          "reject H0")
+
+fit2_mat <- matrix(data = NA, nrow = 5, ncol = 2)
+fit2_mat[,1] <- col1
+fit2_mat[,2] <- col2
+
+# plotting kable
+fit2_mat %>% 
+  kbl(
+    caption = "Results of the quadrat test for the fitted inhomogenous Poisson process model",
+    format = "latex",
+    booktabs = T
+    ) %>%
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down"))
+
 ```
 
-```{r plot-fit2-envelope}
-plot(fit2_env)
-```
+With a $\chi^2$ test-statistic of $228.81$, we have a p-value of $0.001$ which gives us sufficient evidence to reject the fitted inhomogeneous Poisson process model under the null hypothesis, and conclude that the true underlying Poisson process is even more clustered than that of this model.
 
-This figure depicts an observed K-function as well as an envelope of theoretical K-functions based on the intensity function $\lambda(s)$ fit in the cluster model that was just fit. As can be seen here, the level of clustering is actually greater in the observed point process up until the distance $r=3$. We're not entirely satisfied by the results of this model due to how it underestimates the clustering relative to that expressed in the true data, hence we want to move on to the Matern cluster point process-- although the results of this model do have implications for the subsequent model. 
+Having ruled this model out, we want to move on to the Cox point process model, more specifically, the Matern cluster point process.
 
 ### Cox processes and the Matern cluster process model
 
-The Cox process model treats the intensity function $\lambda(s)$ as a stochastic process, adding a significant layer of complexity (and flexibility) relative to the somewhat inflexible inhomogeneous Poisson process model. More specifically we will be discussing the Matern cluster process model. 
+Cox process models treat the intensity function $\lambda(s)$ as a stochastic process, adding a significant layer of complexity (and flexibility) relative to the somewhat inflexible inhomogeneous Poisson process model. More specifically we will be discussing the Matern cluster process model. 
 
 The Matern cluster point process is formed by taking a pattern of "parent" points, generated according to some Poisson process with intensity parameter $\kappa$, and then generating around it a random number of "offspring" which is itself a Poisson random variable with mean $\mu$. The locations of the offspring are independent and identically distributed via a Uniform distribution in a radius around the parent defined by the parameter $R$, also known as the scale.
 
@@ -451,34 +414,34 @@ fit_matclust <- matclust.estK(ppp_9019,
                               q = 1/4, p = 1)
 ```
 
-```{r plot-matern-process}
+```{r plot-matern-process, fit.pos = "H"}
 # teal line is the homogenous PP
 # red line is the 
 plot(fit_matclust,
      main = "Empirical and theoretical K-functions \n Matern cluster process")
-```
-This figure gives the theoretical and empirical K-functions of the Matern cluster process model. The cyan line is the homogeneous Poisson process, which we have long since established is ill-fitted to the data. The black line is our empirical K-function, and the red line is the theoretical K-function under the model. 
 
-Based off of this plot of the K-function, it appears in fact that the Matern cluster process model is fairly consistent at estimating the true underlying process given that the discrepancy between the theoretical and empirical K-functions is very low even up to very large distances. The following table gives the parameter values chosen for the Matern cluster model we have opted for. 
-
-```{r tbl-matern-process}
 matclust_df <- data.frame(kappa = fit2_kappa,
                          R = fit2_R,
                          c = 1/4,
                          p = 1)
+```
 
+This figure gives the theoretical and empirical K-functions of the Matern cluster process model. The cyan line is the homogeneous Poisson process, which we have long since established is ill-fitted to the data. The black line is our empirical K-function, and the red line is the theoretical K-function under the model. 
+
+Based off of this plot of the K-function, it appears in fact that the Matern cluster process model fit using the intensity and parameter estimates from the inhomogeneous Poisson process model fit earlier is fairly consistent at estimating the true underlying process given that the discrepancy between the theoretical and empirical K-functions is very low even up to very large distances.
+
+# Results
+
+It's been debated at length as to whether incidences of school shootings give rise to future events, as long as they've been happening in the modern day. With respect to how this model applies in context, we have established that it's indeed possible that this is the case, as demonstrated by how well the proposed Matern process model fits to the empirical process. Ascertaining the reason as to why this happens would have to be left for some future work, perhaps incorporating some of the unused categorical variables that were included in the data, such as whether the event was preplanned. The data can also be looked at on an areal level and compared next to the accessibility of both mental healthcare and guns (as shown in the Appendix). This was considered as an initial objective, but was later sidelined in favor of focusing on analysis of the clustering process. One also wonders how one might model these tragedies from a spatiotemporal perspective, as it is well documented how events have been on the rise in the past several years (also shown in the Appendix). 
+
+```{r tbl-matern-process}
 matclust_df %>%
   kbl(booktabs = T,
+      caption = "Parameter values chosen for the Matern cluster model.",
       col.names = c("kappa", "R", 
                     "c", "w(t)")) %>%
   kable_styling(latex_options = c("striped"))
 ```
-
-# Discussion 
-
-It's been debated at length as to whether incidences of school shootings give rise to future events, as long as they've been happening in the modern day. With respect to how this model applies in context, we have established that it's indeed possible that this is the case, as demonstrated by how well the proposed Matern process model fits to the empirical process. Ascertaining the reason as to why this happens would have to be left for some future work, perhaps incorporating some of the unused categorical variables that were included in the data, such as whether the event was preplanned. The data can also be looked at on an areal level and compared next to the accessibility of both mental healthcare and guns (as shown in the Appendix). This was considered as an initial objective, but was later sidelined in favor of focusing on analysis of the clustering process.
-
-One also wonders how one might model these tragedies from a spatiotemporal perspective, as it is well documented how events have been on the rise in the past several years (also shown in the Appendix). The ultimate goal of course, would be to be able to effectively isolate the pattern and frequency of these events to pre-empt their occurrences and minimize further harm to others, especially young people.
 
 ## Conclusion
 
@@ -567,8 +530,76 @@ ts_9019 %>%
   geom_label(aes(x = as.Date("2018-01-01"), y = freq_2018,
                  label = "Stoneman Douglas and Santa Fe (Feb/May '18)"),
              color = "black",
-             nudge_x = -2800, size = 3)
+             nudge_x = -2900, size = 3)
 
+```
+
+```{r plot-point-patterns}
+# looking at 3 decades of school shootings
+# 1990-1999
+ss_plot_90s <- ggplot() + 
+  geom_sf(data = us_states) +
+  geom_sf(data = sf_90S, size = 0.75, col = "red") + 
+#  geom_sf(data = cities_sf, color = "black", size = 1) +
+#  geom_text_repel(data = cities_sf, 
+#                  aes(x = x, y = y, label = City_State),
+#                  hjust = 1, vjust = -0.25, size = 2.5) +
+  theme(axis.title = element_blank()) +
+  ggtitle("1990-99, Total: 147") +
+  theme_bw() +
+  theme(
+    axis.title = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x = element_blank(), 
+    axis.text.y = element_blank(),  
+    axis.ticks.y = element_blank(),
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
+
+# 2000-2009
+ss_plot_00s <- ggplot() + 
+  geom_sf(data = us_states) +
+  geom_sf(data = sf_00S, size = 0.75, col = "red") + 
+#  geom_sf(data = cities_sf, color = "black", size = 1) +
+#  geom_text_repel(data = cities_sf, 
+#                  aes(x = x, y = y, label = City_State),
+#                  hjust = 1, vjust = -0.25, size = 2.5) +
+  theme(axis.title = element_blank()) +
+  ggtitle("2000-09, Total: 186") +
+  theme_bw() +
+  theme(
+    axis.title = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x = element_blank(), 
+    axis.text.y = element_blank(),  
+    axis.ticks.y = element_blank(),
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
+
+# 2010-2019
+ss_plot_10s <- ggplot() + 
+  geom_sf(data = us_states) +
+  geom_sf(data = sf_10S, size = 0.75, col = "red") + 
+#  geom_sf(data = cities_sf, color = "black", size = 1) +
+#  geom_text_repel(data = cities_sf, 
+#                  aes(x = x, y = y, label = City_State),
+#                  hjust = 1, vjust = -0.25, size = 2.5) +
+  ggtitle("2010-19, Total: 240") + 
+  theme_bw() +
+  theme(
+    axis.title = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x = element_blank(), 
+    axis.text.y = element_blank(),  
+    axis.ticks.y = element_blank(),
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
+
+ss_plot_90s + ss_plot_00s + ss_plot_10s +
+  plot_annotation(title = "School Shooting per decade, 1990-2019")
 ```
 
 ```{r plot-situation, eval = T}
@@ -594,6 +625,33 @@ ggplot(situation_count, aes(x = Situation, y = Freq),
             hjust= -0.1, color = "black", size = 3.5) +
   scale_y_continuous(limits = c(0, 350)) +
   ggtitle("K-12 School Shootings, by Situation, 1990-2019")
+```
+
+```{r plot-simulate-ppm, out.height = "75%"}
+# homogenous poisson process
+fit_hpp <- ppm(ppp_9019 ~ 1)
+sim1 <- simulate(fit_hpp)
+# converting to sf for plotting
+sim1_sf <- st_as_sf(sim1) %>% st_set_crs(4269)
+
+
+csr_plot <- ggplot() + 
+  geom_sf(data = us_states) +
+  geom_sf(data = sim1_sf) + 
+  theme(axis.title = element_blank()) +
+  ggtitle("An inhomogeneous Poisson process") +
+  theme_bw() +
+  theme(
+    axis.title = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x = element_blank(), 
+    axis.text.y = element_blank(),  
+    axis.ticks.y = element_blank(),
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
+
+csr_plot
 ```
 
 ```{r event-counts-9019}
@@ -752,6 +810,17 @@ plot_state_laws_2019
 plot_mhc_2019
 ```
 
+
+
+```{r plot-quadrats-1990-2019}
+quadrat_9019 <- quadratcount(ppp_9019)
+plot(ppp_9019, axes = F, 
+     main = "Quadrat Plot of Incidents, 1990-2019", 
+     cols= rgb(0,0,0,.2), pch = 20,
+     use.marks = F)
+plot(quadrat_9019, add = TRUE)
+```
+
 ```{r plot-fit1-inhomogeneous}
 # fitting inhomogenous ppp that varies only according to coordinates
 # ppp does not like marked objects so it's being unmarked here
@@ -761,20 +830,29 @@ fit1 <- ppm(ppp_9019_um ~ x + y)
 
 # fitted plot
 plot(fit1, se = F, how = "image",
-     main = "fitted trend of the simple (x,y) model")
+     main = "fitted trend of the inhomogeneous model")
 ```
 
-```{r fit1-env}
-# fit1_env <- envelope(ppp_9019_um, fun = Kinhom,
-#                     funarges = list(lambda=fit1),
-#                     global = T, nsim = 10, verbose = F)
-# plot(fit1_env, xlim = c(0,3))
+```{r fit1-quadrat.test}
+# showing that the fitted inhomogenous model did not explain clustering well
+quadrat.test(fit1, alternative = "clustered",
+             method = "MonteCarlo")
+```
+
+```{r fit2-diagnostic, cache = T}
+fit2_env <- envelope(ppp_9019_um, fun = Kinhom,
+                     funarges = list(lambda=fit2),
+                     global = T, nsim = 10, verbose = F)
+```
+
+```{r plot-fit2-envelope}
+plot(fit2_env)
 ```
 
 ```{r heatmap-preplanned}
 # heatmap of preplanned events
 dens_9019_preplanned <- density.ppp(ppp_9019[ppp_9019$marks == "Yes"])
 plot(dens_9019_preplanned, 
-     main = "Heatmap of Preplanned School Shootings, 1990-2019")
+     main = "Preplanned Events, 1990-2019")
 contour(dens_9019_preplanned, add = T)
 ```
