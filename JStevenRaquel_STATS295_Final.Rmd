@@ -23,7 +23,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F, warning = F, results = 'asis', include = T,
-                      fig.width = 6, fig.height = 3)
+                      fig.width = 7, fig.height = 4)
 library(tidyverse)
 library(lubridate)
 # spatial data libraries
@@ -842,7 +842,7 @@ quadrat.test(fit1, alternative = "clustered",
 ```{r fit2-diagnostic, cache = T}
 fit2_env <- envelope(ppp_9019_um, fun = Kinhom,
                      funarges = list(lambda=fit2),
-                     global = T, nsim = 10, verbose = F)
+                     global = T, nsim = 3, verbose = F)
 ```
 
 ```{r plot-fit2-envelope}
