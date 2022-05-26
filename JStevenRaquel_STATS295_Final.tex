@@ -37,12 +37,12 @@
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
 \hypersetup{
-  pdftitle={Spatial modeling of K-12 school shootings as a Matern clustered point process},
+  pdftitle={Spatial modeling of school shootings as a Matern clustered point process},
   pdfauthor={J Steven Raquel},
   hidelinks,
   pdfcreator={LaTeX via pandoc}}
 \urlstyle{same} % disable monospaced font for URLs
-\usepackage[margin=0.5in]{geometry}
+\usepackage[margin=0.25in]{geometry}
 \usepackage{graphicx}
 \makeatletter
 \def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
@@ -87,8 +87,8 @@
   \usepackage{selnolig}  % disable illegal ligatures
 \fi
 
-\title{Spatial modeling of K-12 school shootings as a Matern clustered
-point process}
+\title{Spatial modeling of school shootings as a Matern clustered point
+process}
 \usepackage{etoolbox}
 \makeatletter
 \providecommand{\subtitle}[1]{% add subtitle to \maketitle
@@ -131,18 +131,17 @@ that comprises the dataset was determined by a specific process which
 entailed asking what exactly comprises a school shooting. Although the
 original database contains shootings ruled accidental (from misuse of a
 firearm) as well as incidences of gang-related gun violence on school
-grounds, among other incidents such as suicide, we did not opt to
-consider this data as relevant to this study in particular. Targeted
-events related to domestic situations, or the escalation of disputes
-(e.g.~fistfights in which one person pulls out a firearm) were also
-ruled school shootings for the purposes of this study.
+grounds, suicide, or using a firearm to damage school property, we did
+not opt to consider this data as relevant to this study in particular.
+Targeted events related to domestic situations such as incidents between
+the perpetrator and their bully, or the escalation of disputes such as
+fistfights in which one person pulls out a firearm however, were ruled
+school shootings for the purposes of this study.
 
 \hypertarget{exploratory-data-analysis}{%
 \subsection{Exploratory Data Analysis}\label{exploratory-data-analysis}}
 
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-point-pattern-9019-1.pdf}
-
-As we can see from the plot above, these events tend to occur in and
+As we can see from the following plot, these events tend to occur in and
 around the same places, which gives credence to our hypothesis that the
 events exhibit a clustered pattern. We notice in fact, that there are
 areas that seem relatively untouched by school shootings in the western
@@ -150,15 +149,20 @@ United States, whereas shootings all across the South, Midwest and the
 East Coast recur a great deal. While the West Coast is somewhat blighted
 by school shootings, particularly in the San Francisco and Los Angeles
 metropolitan areas, along with major cities in the Pacific Northwest),
-it is not nearly at the rate experienced by the other side of the US.
+it is not nearly at the rate experienced by the other side of the US. A
+visual mapping of the kernel density of this point pattern is placed in
+the Appendix for reference.
+
+\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-point-pattern-9019-1.pdf}
 
 One thing that it is important to note, as with many spatial analyses
 that relate to events caused by humans, that the rate of these events do
 correlate in areas with high population density, i.e.~there are more
-observations of school shooting events in areas where many people live.
-While the implications of this unfortunately will not be well explored
-in this literature, it is important to take note of as a confounding
-factor when asking questions about the frequency of these events.
+school shootings in states where many people live, particularly
+California and Florida (see Appendix for a plot of population per state
+in 2019). While the implications of this will not be well explored in
+this literature, it is important to take note of as a confounding factor
+when asking questions about the frequency of these events.
 
 \hypertarget{point-pattern-analysis}{%
 \subsection{Point Pattern Analysis}\label{point-pattern-analysis}}
@@ -166,10 +170,7 @@ factor when asking questions about the frequency of these events.
 With respect to the coordinate-level data, as with any spatial point
 pattern analysis, we are concerned with the following three questions,
 1) whether the points are located at random, 2) whether they are
-clustered, and 3) whether they are placed regularly. Clustering and
-regular point patterns respectively are the two opposite ends of the
-behavior of a point pattern whereas complete spatial randomness is in
-the middle.
+clustered, and 3) whether they are a regular point pattern.
 
 The hypothesis of \emph{complete spatial randomness}, or a homogeneous
 Poisson process, asserts the following:
@@ -195,42 +196,18 @@ In a homogeneous Poisson process the distribution of events is scattered
 all throughout the space such that there are no clusters anywhere nor
 any consistent pattern (an example can be seen in the Appendix). We want
 to test formally that the data does not follow such a distribution. We
-can do this visually first by mapping the density of the data across the
-spatial domain.
+can do this by conducting a quadrat test.
 
-\hypertarget{kernel-density}{%
-\subsubsection{Kernel Density}\label{kernel-density}}
+\hypertarget{quadrat-test}{%
+\subsubsection{Quadrat Test}\label{quadrat-test}}
 
-We can visually ascertain as to whether the point pattern \(X\) is
-homogeneous by looking at the plot of the Gaussian kernel smoothed
-intensity function, which appears as a heatmap. Density based mesasures
-look at the first order property of the process, the intensity function,
-which illustrates how observations vary from place to place due to the
-underlying property, whereas the second order property illustrates how
-observations vary from place to place due to interaction effects between
-observations themselves (Gimond).
-
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/density-90-19-1.pdf}
-
-Based on this heatmap of the density function, we note that clustering
-is most strong around the south, namely Florida, as well as in the
-northeastern United States around New York, where the density is at
-least 2. Conversely the density on the west coast is much lower at
-around 0.5 along the California coast and the Pacific Northwest. The
-center of the US however, is relatively untouched by these events
-according to this map.
-
-\hypertarget{quadrats}{%
-\subsubsection{Quadrats}\label{quadrats}}
-
-What we are interested in this particular analysis is to how the
-intensity varies across different regions contained therein. We do this
-by splitting up the area into what are referred to as \emph{quadrats},
-small subsets of the event space, and counting the number of events
-contained within each quadrat. We can test against the hypothesis of
-complete spatial randomness by generating a \(\chi^2\) test statistic
-based on the number of expected vs observed events in each quadrat. The
-quadrat plot of this process can be seen in the Appendix.
+As a tool for diagnosing complete spatial randomness, we can split up
+the spatial domain into what are referred to as \emph{quadrats}, small
+subsets of the event space, and counting the number of events contained
+within each quadrat. We can test against the hypothesis of complete
+spatial randomness by generating a \(\chi^2\) test statistic based on
+the number of expected vs observed events in each quadrat. The quadrat
+plot of this process can be seen in the Appendix.
 
 It's important to note the count of events contained within each quadrat
 is dependent on the definition of these dimensions, so they can be
@@ -315,7 +292,7 @@ has complete spatial randomness or if it is clustered.
 
 \includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-G-function-1.pdf}
 
-Contained in this figure we do see a marked difference between the
+Contained in this figure we do see a marked difference where the
 empirical G-function exceeds the theoretical G-function up to
 approximately \(r = 1\), after which point it crosses the envelope of
 the point process which exhibits CSR and emerges underneath it. This
@@ -449,11 +426,13 @@ and the theoretical intensity of the process is
 Recall that earlier we fit an inhomogeneous Poisson point process model
 using the Matern cluster algorithm to define the clusters. The model
 that was fit returned estimates for not only the intensity function
-\(\lambda(s)\), but also \(\kappa\) and \(\mu\), the intensity parameter
-of the parent points' pattern, and the mean parameter for the Poisson
-random variable of the number of offspring. For values of \(c\) and
-\(w(t)\), we want to opt for \(c=0.25\) and a weight function of
-\(w(t) = 1\), as these are well suited to well-clustered data.
+\(\lambda(s)\), but also \(\kappa\), the intensity parameter of the
+parent points' pattern, and the scale parameter \(R\) for the range
+around which the offspring come from the parent. We can use these fitted
+values as a starting point from which we can run the model and hopefully
+converge to a reasonable estimate. For values of \(c\) and \(w(t)\), we
+want to opt for \(c=0.25\) and a weight function of \(w(t) = 1\), as
+these are well suited to well-clustered data.
 
 \includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-matern-process-1.pdf}
 
@@ -478,27 +457,35 @@ give rise to future events, as long as they've been happening in the
 modern day. With respect to how this model applies in context, we have
 established that it's indeed possible that this is the case, as
 demonstrated by how well the proposed Matern process model fits to the
-empirical process. Ascertaining the reason as to why this happens would
-have to be left for some future work, perhaps incorporating some of the
-unused categorical variables that were included in the data, such as
-whether the event was preplanned. The data can also be looked at on an
-areal level and compared next to the accessibility of both mental
-healthcare and guns (as shown in the Appendix). This was considered as
-an initial objective, but was later sidelined in favor of focusing on
-analysis of the clustering process. One also wonders how one might model
-these tragedies from a spatiotemporal perspective, as it is well
-documented how events have been on the rise in the past several years
-(also shown in the Appendix).
+empirical process.
+
+The model gives a recommended range of \(R\) to be \([0, 6.0633]\),
+which is the range around some event around which other future events
+may occur. The model converges to the range \(R \approx 3.3597\) and
+\(\kappa \approx 0.0144\), which is the intensity of the random variable
+for parent events, which contextually refer to those events which
+inspire others. The range gives us the approximate radius around some
+event that some future event may take place.
+
+Ascertaining the reason as to why this happens would have to be left for
+some future work, perhaps incorporating some of the unused categorical
+variables that were included in the data, such as whether the event was
+preplanned. The data can also be looked at on an areal level against
+population size and compared next to the accessibility of both mental
+healthcare and guns (as shown in the Appendix). One also wonders how one
+might model these tragedies from a spatiotemporal perspective, as it is
+well documented how events have been on the rise in the past several
+years (also shown in the Appendix).
 
 \begin{table}
 
 \caption{\label{tab:tbl-matern-process}Parameter values chosen for the Matern cluster model.}
 \centering
-\begin{tabular}[t]{rrrr}
+\begin{tabular}[t]{llrr}
 \toprule
 kappa & R & c & w(t)\\
 \midrule
-\cellcolor{gray!6}{0.0172795} & \cellcolor{gray!6}{1.322571} & \cellcolor{gray!6}{0.25} & \cellcolor{gray!6}{1}\\
+\cellcolor{gray!6}{0.0144} & \cellcolor{gray!6}{3.3597} & \cellcolor{gray!6}{0.25} & \cellcolor{gray!6}{1}\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -560,12 +547,17 @@ Firearm Laws. {[}online{]} Statefirearmlaws.org. Available at:
 
 \includegraphics[height=0.75\textheight]{JStevenRaquel_STATS295_Final_files/figure-latex/plot-simulate-ppm-1}
 
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-areals-2019-1.pdf}
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-areals-2019-2.pdf}
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-areals-2019-3.pdf}
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-areals-2019-4.pdf}
+\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-areal-events-1.pdf}
+
+\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-gc-mhc-1.pdf}
+
+\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-pop-1.pdf}
+
+\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/density-90-19-1.pdf}
 
 \includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-quadrats-1990-2019-1.pdf}
+
+\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/heatmap-preplanned-1.pdf}
 
 \includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-fit1-inhomogeneous-1.pdf}
 
@@ -581,7 +573,5 @@ hypothesis: clustered
 Quadrats: 23 tiles (irregular windows)
 
 \includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/plot-fit2-envelope-1.pdf}
-
-\includegraphics{JStevenRaquel_STATS295_Final_files/figure-latex/heatmap-preplanned-1.pdf}
 
 \end{document}

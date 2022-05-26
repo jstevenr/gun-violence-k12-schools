@@ -27,3 +27,8 @@ plotrix
 ggmap
 splancs
 patchwork
+RColorBrewer
+classInt
+bookdown
+knitr
+kableExtra
