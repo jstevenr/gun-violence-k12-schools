@@ -39,7 +39,7 @@ library(kableExtra)
 ```
 
 ```{r read_incidents_old, eval = F, include = F}
-incidents <- read_csv("ss_incidents.csv", na = c("", "null", "N/A"),
+incidents <- read_csv("data/ss_incidents.csv", na = c("", "null", "N/A"),
                       show_col_types = F)
 
 # incident dataset filtered
@@ -66,16 +66,15 @@ incidents_f <- incidents_f %>%
 
 ```{r get-lat-lon, eval = F, include = F}
 # using Google Maps API to search up the lat/lon of all the schools
-#incidents_f2 <- incidents_f %>% 
-#  mutate_geocode(Full_Location)
+## incidents_f2 <- incidents_f %>% mutate_geocode(Full_Location)
 # writing to file so I do not have to query again
-# write.csv(incidents_f2, "ss_incidents2.csv", row.names = F)
+## write.csv(incidents_f2, "ss_incidents2.csv", row.names = F)
 ```
 
 ```{r get-perps-weapons, eval = F}
-perps <- read_csv("ss_perps.csv", na = c("", "null", "N/A"), 
+perps <- read_csv("data/ss_perps.csv", na = c("", "null", "N/A"), 
                   show_col_types = F)
-weapons <- read_csv("ss_weapons.csv", na = c("", "null", "N/A"),
+weapons <- read_csv("data/ss_weapons.csv", na = c("", "null", "N/A"),
                     show_col_types = F)
 
 # perpetrator dataset filtered
@@ -97,7 +96,7 @@ incidents_f4 <- left_join(incidents_f3, weapons_f, by = "Incident_ID")
 ```
 
 ```{r reading_data, warnings = F}
-df <- read_csv("ss_incidents2.csv",
+df <- read_csv("data/ss_incidents2.csv",
                   col_types = "ciDffffffffffffffffdd")
 
 df_9019 <- df %>% filter(Date >= "1990-01-1" & Date <= "2019-12-31")
@@ -105,7 +104,7 @@ df_90S <- df %>% filter(Date >= "1990-01-01" & Date <= "1999-12-31")
 df_00S <- df %>% filter(Date >= "2000-01-01" & Date <= "2009-12-31")
 df_10S <- df %>% filter(Date >= "2010-01-01" & Date <= "2019-12-31")
 
-gun_control <- read_csv("gun_control_database.csv", col_types = "cf")
+gun_control <- read_csv("data/gun_control_database.csv", col_types = "cf")
 ```
 
 ```{r sf-wrangling}
@@ -733,7 +732,7 @@ us_states3 <- us_states %>%
 ```
 
 ```{r mental-healthcare-2019, warning = F}
-mha_2019 <- read.csv("mha_rank_2019.csv", sep = " ") %>% 
+mha_2019 <- read.csv("data/mha_rank_2019.csv", sep = " ") %>% 
   rename(NAME = State.) %>%
   filter(!(NAME %in% c("Alaska", "Hawaii")))
 
@@ -751,7 +750,7 @@ us_states4 <- us_states %>%
 ```
 
 ```{r pop_2019}
-pop_2019 <- read.csv("pop_data_2019.csv") %>%
+pop_2019 <- read.csv("data/pop_data_2019.csv") %>%
   rename(NAME = Name)
 # remove leading periods
 pop_2019$NAME <-  gsub('^\\.|\\.$', '', pop_2019$NAME)
